@@ -83,18 +83,20 @@ export async function handleSidebarRequest(
     // Step 6: Pause briefly to ensure group is properly set up
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Step 7: Send invitation quick actions to original group
+    // Step 7: Send invitation quick actions with agent-specific namespacing
+    const agentId = sidebarClient!.inboxId.slice(0, 8); // Use first 8 chars of inbox ID as unique identifier
+    
     const invitationActions: ActionsContent = {
-      id: `sidebar_invite_${sidebarGroup.id}`,
+      id: `rocky_${agentId}_sidebar_invite_${sidebarGroup.id}`,
       description: `🎯 "${groupName}" sidebar group created! Would you like to join this focused discussion?`,
       actions: [
         {
-          id: `join_sidebar_${sidebarGroup.id}`,
+          id: `rocky_${agentId}_join_sidebar_${sidebarGroup.id}`,
           label: "✅ Yes, Join",
           style: "primary"
         },
         {
-          id: `decline_sidebar_${sidebarGroup.id}`,
+          id: `rocky_${agentId}_decline_sidebar_${sidebarGroup.id}`,
           label: "❌ No Thanks",
           style: "secondary"
         }

@@ -879,9 +879,31 @@ async function main() {
         message?.contentType?.typeId === "intent") {
       const intentContent = message.content as any;
       const actionId = intentContent.actionId;
+      const originalActionsId = intentContent.id;
       
       console.log(`🎯 Received Quick Action intent: ${actionId}`);
       console.log(`🎯 Full intent content:`, JSON.stringify(intentContent, null, 2));
+      
+      // CRITICAL: Only respond to Quick Actions that Rocky initiated
+      // Check if the actions ID starts with Rocky's prefixes (including agent-specific namespacing)
+      const agentId = client.inboxId.slice(0, 8);
+      const rockyActionPrefixes = [
+        'basecamp_welcome_actions',
+        'schedule_followup_actions', 
+        'broadcast_',
+        `rocky_${agentId}_sidebar_invite_`,
+        'group_selection_actions',
+        'urgent_message_actions'
+      ];
+      
+      const isRockyAction = rockyActionPrefixes.some(prefix => 
+        originalActionsId?.startsWith(prefix)
+      );
+      
+      if (!isRockyAction) {
+        console.log(`⏭️ Skipping intent - not initiated by Rocky (ID: ${originalActionsId})`);
+        continue;
+      }
       
       // Get conversation to respond
       const conversation = await client.conversations.getConversationById(message.conversationId);
@@ -893,9 +915,7 @@ async function main() {
           // Use AI agent to provide schedule information
           try {
             // First send the schedule information with the link
-            const scheduleResponse = `
-
-You can view the full schedule in the Basecamp mini app basecamp25.app and sign up for sessions. Feel free to ask me any questions about the schedule and I'll help you craft an epic Basecamp experience.
+            const scheduleResponse = `You can view the full schedule in the Basecamp mini app basecamp25.app and sign up for sessions. Feel free to ask me any questions about the schedule and I'll help you craft an epic Basecamp experience.
 
 Examples:
 •⁠  ⁠What's the schedule on Monday?
@@ -1392,16 +1412,16 @@ Is there anything else I can help with?`,
           break;
         default:
           // Handle sidebar group actions with dynamic IDs
-          if (actionId.startsWith('join_sidebar_')) {
-            const groupId = actionId.replace('join_sidebar_', '');
+          if (actionId.startsWith(`rocky_${agentId}_join_sidebar_`)) {
+            const groupId = actionId.replace(`rocky_${agentId}_join_sidebar_`, '');
             console.log(`🎯 User joining sidebar group: ${groupId}`);
             const joinResult = await joinSidebarGroup(groupId, message.senderInboxId);
             await conversation.send(joinResult);
             break;
           }
           
-          if (actionId.startsWith('decline_sidebar_')) {
-            const groupId = actionId.replace('decline_sidebar_', '');
+          if (actionId.startsWith(`rocky_${agentId}_decline_sidebar_`)) {
+            const groupId = actionId.replace(`rocky_${agentId}_decline_sidebar_`, '');
             console.log(`🎯 User declining sidebar group: ${groupId}`);
             const declineResult = await declineSidebarGroup(groupId, message.senderInboxId);
             await conversation.send(declineResult);

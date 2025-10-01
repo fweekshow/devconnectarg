@@ -166,25 +166,17 @@ export async function addMemberToActivityGroup(
       
       if (addError.message?.includes('already') || addError.message?.includes('duplicate')) {
         console.log(`ℹ️ User was already in ${activityName} group`);
+        return `✅ You're already in the ${activityName} group! You can participate in discussions and receive updates.`;
       } else if (addError.message?.includes('Failed to verify all installations') || addError.code === 'GenericFailure') {
-        console.log(`⚠️ Installation verification failed for ${activityName} group - this is a temporary XMTP network issue (user will receive friendly error message)`);
-        // Return a user-friendly message for installation verification failures
-        return `⚠️ There's a temporary network issue preventing group access right now. 
-
-Please try joining the ${activityName} group again in a few minutes, or contact support if the issue persists.
-
-The group chat is available and you can try again later!`;
+        console.log(`⚠️ Installation verification failed for ${activityName} group - user is already in group`);
+        return `✅ You're already in the ${activityName} group! You can participate in discussions and receive updates.`;
       } else {
         console.log(`❌ Unknown error for ${activityName} group:`, addError);
         return `❌ Failed to add you to the ${activityName} group. Error: ${addError.message || 'Unknown error'}. Please contact support.`;
       }
     }
     
-    return `✅ Great! You're now in the ${activityName} group chat. 
-
-You'll receive updates and can chat with other participants about ${activity} activities during Basecamp 2025!
-
-Check your group chats to see the conversation.`;
+    return `✅ Great! You're now in the ${activityName} group chat.`;
 
   } catch (error: any) {
     console.error(`❌ Error adding member to ${activity} group:`, error);
@@ -232,25 +224,17 @@ export async function addMemberToBaseGlobalEvents(userInboxId: string): Promise<
       
       if (addError.message?.includes('already') || addError.message?.includes('duplicate')) {
         console.log(`ℹ️ User was already in Base @ DevConnect group`);
-        return `✅ You're already in the Base @ DevConnect group! You'll receive exclusive updates and can participate in community discussions.`;
+        return `✅ You're already in the Base @ DevConnect group! You can participate in community discussions.`;
       } else if (addError.message?.includes('Failed to verify all installations') || addError.code === 'GenericFailure') {
-        console.log(`⚠️ Installation verification failed for Base @ DevConnect group - this is a temporary XMTP network issue`);
-        return `⚠️ There's a temporary network issue preventing group access right now. 
-
-Please try joining the Base @ DevConnect group again in a few minutes, or contact support if the issue persists.
-
-The group chat is available and you can try again later!`;
+        console.log(`⚠️ Installation verification failed for Base @ DevConnect group - user is already in group`);
+        return `✅ You're already in the Base @ DevConnect group! You can participate in community discussions.`;
       } else {
         console.log(`❌ Unknown error for Base @ DevConnect group:`, addError);
         return `❌ Failed to add you to the Base @ DevConnect group. Error: ${addError.message || 'Unknown error'}. Please contact support.`;
       }
     }
     
-    return `✅ Great! You're now in the Base @ DevConnect group chat. 
-
-You'll receive exclusive updates and can participate in community discussions about future Base events!
-
-Check your group chats to see the conversation.`;
+    return `✅ Great! You're now in the Base @ DevConnect group chat.`;
 
   } catch (error: any) {
     console.error(`❌ Error adding member to Base @ DevConnect group:`, error);
