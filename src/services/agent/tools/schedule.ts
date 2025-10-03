@@ -359,9 +359,9 @@ export const getActivityTime = tool(
   },
   {
     name: "GetActivityTime",
-    description: "Use when someone asks about timing for a specific activity like 'What time is pickleball?', 'When is yoga?', 'What time?'. Parameters: activity (string) - the activity they're asking about, day (optional string) - Monday or Tuesday",
+    description: "Use when someone asks about timing for a specific DevConnect event or activity like 'What time is Staking Summit?', 'When is ETH Day?', 'What time is the opening ceremony?'. Parameters: activity (string) - the event/activity they're asking about, day (optional string) - the specific day if mentioned",
     schema: z.object({
-      activity: z.string().describe("The activity they're asking about"),
+      activity: z.string().describe("The DevConnect event or activity they're asking about"),
       day: z.string().describe("The day to get activity time"),
     }),
   }

@@ -346,6 +346,7 @@ async function handleMessage(message: DecodedMessage, client: Client) {
         }
       }
       
+      /* COMMENTED OUT - OLD BASECAMP ACTIVITY KEYWORDS NOT NEEDED FOR DEVCONNECT YET
       // Use AI to detect if this is a single activity keyword
       const activityDetectionPrompt = `Is this message a single activity keyword that matches one of these activities: yoga, running, pickleball, hiking, builder, payments, trenches, coding, ads, agents, video, roast, mini app, governance, deals, defi, network, coining, students?
 
@@ -403,13 +404,14 @@ Would you like me to add you to the ${displayName} @ Basecamp group chat?`,
                 ]
               };
             await (conversation as any).send(conciergeActionsContent, ContentTypeActions);
-            return
+            return;
           }
         } catch (activityError) {
           console.error("❌ Error sending activity Quick Actions:", activityError);
           // Fall through to AI processing
         }
       }
+      */ // END OLD BASECAMP ACTIVITY KEYWORD CHECK
       
       // Get conversation context for this user
       const conversationContext = getConversationContext(senderInboxId);
@@ -420,35 +422,35 @@ Would you like me to add you to the ${displayName} @ Basecamp group chat?`,
 
 Message: "${cleanContent}"
 
-Respond with just "YES" if it's a greeting/engagement, or "NO" if it's a specific question or request.`;
+CRITICAL: Respond with ONLY the word "YES" or ONLY the word "NO". No other text.`;
 
-      const isGreeting = await agent.run(
+      const isGreeting = (await agent.run(
         greetingCheckPrompt,
         senderInboxId,
         conversationId,
         isGroup,
         senderAddress,
-      );
+      )).trim().toUpperCase();
 
       // If not a greeting, check if it's gibberish/vague/unclear
-      let shouldShowQuickActions = isGreeting && isGreeting.toLowerCase().includes("yes");
+      let shouldShowQuickActions = isGreeting === "YES";
       
       if (!shouldShowQuickActions) {
         const gibberishCheckPrompt = `Is this message gibberish, vague, unclear, nonsensical, or lacking clear intent? Examples of gibberish: "asdf", "weeds", "xyz", "jfjfjf", random letters/words without meaning. Examples of vague: "stuff", "things", "idk", single unclear words.
 
 Message: "${cleanContent}"
 
-Respond with just "YES" if it's gibberish/vague/unclear, or "NO" if it has clear intent or is a real question.`;
+CRITICAL: Respond with ONLY the word "YES" or ONLY the word "NO". No other text.`;
 
-        const isGibberish = await agent.run(
+        const isGibberish = (await agent.run(
           gibberishCheckPrompt,
           senderInboxId,
           conversationId,
           isGroup,
           senderAddress,
-        );
+        )).trim().toUpperCase();
         
-        shouldShowQuickActions = isGibberish && isGibberish.toLowerCase().includes("yes");
+        shouldShowQuickActions = isGibberish === "YES";
         if (shouldShowQuickActions) {
           console.log("🤔 AI detected gibberish/vague message, sending Quick Actions...");
         }
@@ -545,18 +547,18 @@ If it's just greetings, commands, or statements, respond "NO".
 
 Message: "${cleanContent}"
 
-Respond with only "YES" or "NO".`;
+CRITICAL: Respond with ONLY the word "YES" or ONLY the word "NO". No other text.`;
 
-      const hasQuestion = await agent.run(
+      const hasQuestion = (await agent.run(
         generalQuestionPrompt,
         senderInboxId,
         conversationId,
         isGroup,
         senderAddress,
-      );
+      )).trim().toUpperCase();
       console.log("🔍 hasQuestion", hasQuestion);
       
-      if (hasQuestion && hasQuestion.toLowerCase().includes("yes")) {
+      if (hasQuestion === "YES") {
         console.log("🎯 AI detected question - processing with full AI agent...");
         
         // Check if this question is about a specific activity group
@@ -655,18 +657,18 @@ Is there anything else I can help with?`,
 
 Message: "${cleanContent}"
 
-Respond with only "YES" or "NO".`;
+CRITICAL: Respond with ONLY the word "YES" or ONLY the word "NO". No other text.`;
 
-      const isGroupJoinRequest = await agent.run(
+      const isGroupJoinRequest = (await agent.run(
         groupJoinPrompt,
         senderInboxId,
         conversationId,
         isGroup,
         senderAddress,
-      );
+      )).trim().toUpperCase();
       console.log("🔍 isGroupJoinRequest", isGroupJoinRequest);
       
-      if (isGroupJoinRequest && isGroupJoinRequest.toLowerCase().includes("yes")) {
+      if (isGroupJoinRequest === "YES") {
         console.log("🎯 AI detected group joining request, sending Quick Actions...");
         try {
           const { generateGroupSelectionQuickActions } = await import("./services/agent/tools/activityGroups.js");
