@@ -3,30 +3,40 @@ import { BASECAMP_URL } from "@/constant.js";
 
 export const fetchBasecampInfo = tool(
   () => {
-    return `Basecamp 2025 Information:
+    return `DevConnect 2025 Information:
 
-Event Dates: September 14-16, 2025
+Event Location: Buenos Aires, Argentina
+Event Dates: November 15-23, 2025
+Main Venue: La Rural (Devconnect Cube / World's Fair)
 
-What we know from ${BASECAMP_URL}:
+📅 EVENT OVERVIEW:
+• November 15-16: Pre-events (Staking Summit, Governance Day, Ethereum Cypherpunk Congress)
+• November 17: ETH Day & DevConnect Cube Opening Ceremony - World's Fair begins at La Rural
+• November 18-22: DevConnect Cube at La Rural with multiple sub-events and conferences
+• November 21-23: ETHGlobal Hackathon
 
-📅 SCHEDULE:
-• Sunday 9/14: Guest arrivals, Welcome Reception (6:00–10:00pm)
-• Monday 9/15: Full day of programming with breakfast, sessions, activities, dinner
-• Tuesday 9/16: Final day with programming and closing activities
+🎫 TICKETS:
+• Events at La Rural require a World's Fair ticket to enter
+• Many sub-events require additional registration or tickets
+• Check the calendar for specific event requirements
 
-❓ FAQ TOPICS (visit website for details):
-• What is Basecamp?
-• Is Basecamp free? What costs do I cover?
-• When can I expect to hear back about my application?
-• What are you looking for in applicants?
-• What happens if I'm not accepted?
-• Will Basecamp be livestreamed or available online?
+🏛️ MAJOR TRACKS:
+• Staking & Infrastructure
+• Governance & Protocol Development
+• Privacy & Security (zkID, zkTLS, Encryption)
+• DeFi & Payments
+• Developer Tools & Client Development
+• Community & Education
 
-For complete details, applications, and FAQ answers: ${BASECAMP_URL}`;
+🌍 VENUE TYPES:
+• World's Fair (La Rural) - Main DevConnect Cube venue
+• Community Events - Throughout Buenos Aires
+
+For complete details, event listings, and tickets: ${BASECAMP_URL}`;
   },
   {
     name: "FetchBasecampInfo",
     description:
-      "Provides all available information about Basecamp 2025 based on the official website",
+      "Provides all available information about DevConnect 2025 based on the official website",
   },
 );

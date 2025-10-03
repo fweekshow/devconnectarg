@@ -436,7 +436,7 @@ Respond with just "YES" if it's a greeting/engagement, or "NO" if it's a specifi
           // Create Quick Actions for welcome message using proper ActionsContent type
           const quickActionsContent: ActionsContent = {
             id: "basecamp_welcome_actions",
-            description: "Hi! I'm Rocky the Basecamp Agent. Here are things I can help you with:",
+            description: "Hi! I'm Rocky the DevConnect Agent. Here are things I can help you with:",
             actions: [
               {
                 id: "schedule",
@@ -480,7 +480,7 @@ Respond with just "YES" if it's a greeting/engagement, or "NO" if it's a specifi
         } catch (quickActionsError) {
           console.error("❌ Error sending Quick Actions:", quickActionsError);
           // Fallback to regular text
-          await conversation.send("Hi! I'm Rocky the Basecamp Agent. I can help you with the Schedule, Set Reminders, or Concierge Support. What would you like to know?");
+          await conversation.send("Hi! I'm Rocky the DevConnect Agent. I can help you with the Schedule, Set Reminders, or Concierge Support. What would you like to know?");
           addToConversationHistory(senderInboxId, cleanContent, "Welcome message sent (fallback)");
           return;
         }
@@ -689,7 +689,7 @@ Respond with only "YES" or "NO".`;
             console.error("❌ Error sending Quick Actions:", quickActionsError);
             console.log("🔄 Falling back to regular text response");
             // Fallback to regular text
-            await conversation.send("Hi! I'm Rocky the Basecamp Agent. I can help you with the Schedule, Set Reminders, or Concierge Support. What would you like to know?");
+            await conversation.send("Hi! I'm Rocky the DevConnect Agent. I can help you with the Schedule, Set Reminders, or Concierge Support. What would you like to know?");
           }
         } else {
           // Regular text response with follow-up actions
@@ -759,7 +759,7 @@ async function main() {
     console.log(`📅 Agent Context: Today is ${now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`);
     
     console.log("🔄 Initializing client...");
-    const dbPath = getDbPath("basecamp-agent");
+    const dbPath = getDbPath("devconnect-agent");
     console.log("🔄 DB path:", dbPath);
     const client = await Client.create(signer, {
       dbEncryptionKey: encryptionKey,
@@ -932,13 +932,13 @@ async function main() {
           // Use AI agent to provide schedule information
           try {
             // First send the schedule information with the link
-            const scheduleResponse = `You can view the full schedule in the Basecamp mini app basecamp25.app and sign up for sessions. Feel free to ask me any questions about the schedule and I'll help you craft an epic Basecamp experience.
+            const scheduleResponse = `You can view the full schedule at devconnect.org/calendar and sign up for sessions. Feel free to ask me any questions about the schedule and I'll help you craft an epic DevConnect experience.
 
 Examples:
-•⁠  ⁠What's the schedule on Monday?
-•⁠  ⁠When is the Pickleball Tournament on Monday?
-•⁠  ⁠What time is the Welcome Reception?
-•⁠  ⁠What are the day activities?
+•⁠  ⁠When is DevConnect Opening Ceremony?
+•⁠  ⁠When is Builder Nights Buenos Aires?
+•⁠  ⁠Tell me about ETH Day
+•⁠  ⁠What events are on Thursday?
 
 Just ask naturally - I understand conversational requests!`;
             
@@ -971,12 +971,11 @@ Just ask naturally - I understand conversational requests!`;
         case "wifi":
           const wifiActionsContent: ActionsContent = {
             id: "wifi_followup_actions",
-            description: `📶 Basecamp 2025 WiFi Information
+            description: `📶 DevConnect 2025 WiFi Information
 
-Network: Basecamp25
-Password: 0xBasecamp
+WiFi details coming soon!
 
-Connect using these credentials to access high-speed internet throughout the venue.
+Check back closer to the event for network credentials to access high-speed internet at La Rural.
 
 Is there anything else I can help with?`,
             actions: [
@@ -996,11 +995,11 @@ Is there anything else I can help with?`,
           break;
         case "shuttles":
           // First send the shuttle information with the link
-          await conversation.send(`🚌 Shuttles
+          await conversation.send(`🚌 Shuttles & Transportation
 
-View shuttle information in the Basecamp mini app basecamp25.app.
+View transportation information at devconnect.org/calendar for details about getting to La Rural and around Buenos Aires.
 
-Need help with shuttle schedules or pickup locations? Let me know!`);
+Need help with transportation or venue locations? Let me know!`);
           
           // Then send the follow-up actions in a separate message
           const shuttlesFollowupActionsContent: ActionsContent = {
@@ -1026,79 +1025,49 @@ Need help with shuttle schedules or pickup locations? Let me know!`);
             id: "concierge_support_actions",
             description: `Concierge Support
 
-I'm here to help as your Concierge during Basecamp 2025! 
+I'm here to help as your Concierge during DevConnect 2025! 
 
-Is this an urgent matter that needs immediate attention?`,
+Concierge contact details coming soon. Check back closer to the event for support information.
+
+Is there anything else I can help with?`,
             actions: [
               {
-                id: "urgent_yes",
-                label: "🚨 Yes, Urgent",
-                style: "danger"
+                id: "show_main_menu",
+                label: "✅ Yes",
+                style: "primary"
               },
               {
-                id: "urgent_no", 
-                label: "📧 No, Not Urgent",
+                id: "end_conversation",
+                label: "❌ No",
                 style: "secondary"
               }
             ]
           };
           await (conversation as any).send(conciergeActionsContent, ContentTypeActions);
           break;
-        case "join_groups":
-          const { generateGroupSelectionQuickActions } = await import("./services/agent/tools/activityGroups.js");
-          const groupSelectionActions = generateGroupSelectionQuickActions();
-          await (conversation as any).send(groupSelectionActions, ContentTypeActions);
-          break;
+        
+        /* BASECAMP URGENT SUPPORT - COMMENTED OUT FOR DEVCONNECT
+        // TODO: Add DevConnect urgent support contact info when available
         case "urgent_yes":
           // Store that user is in urgent mode
           addToConversationHistory(message.senderInboxId, "urgent_yes", "User selected urgent support");
-          await conversation.send(`Urgent Support
-
-I understand this is urgent! Here are the direct contact numbers for immediate assistance:
-
-HOTEL FRONT DESKS:
-• SPRUCE PEAK: +1 844-367-1672
-• TÄLTA Lodge: (802) 253-7525
-• AWOL: (802) 277-6200
-• Cady Hill Lodge: (802) 276-8200
-• Field Guide Lodge: (802) 253-8088
-• Outbound: (802) 253-7595
-
-TRANSPORTATION: +1 (805) 601-6178
-SECURITY (Spruce Peak): 802-461-6990
-
-Hope this helps!`);
+          await conversation.send(`Urgent Support - Coming Soon
           
-          // Send follow-up actions in a separate message
-          const urgentYesFollowupActionsContent: ActionsContent = {
-            id: "urgent_yes_followup_actions",
-            description: "Is there anything else I can help with?",
-            actions: [
-              {
-                id: "show_main_menu",
-                label: "✅ Yes",
-                style: "primary"
-              },
-              {
-                id: "end_conversation",
-                label: "❌ No",
-                style: "secondary"
-              }
-            ]
-          };
-          await (conversation as any).send(urgentYesFollowupActionsContent, ContentTypeActions);
+Contact details will be available closer to the event.`);
           break;
         case "urgent_no":
-          await conversation.send(`Non-Urgent Support
-
-For non-urgent matters, please send a message to:
-concierge@base.org
-
-This is the best way to reach our support team for general questions, requests, or non-urgent concerns.`);
+          await conversation.send(`Non-Urgent Support - Coming Soon
           
-          // Send follow-up actions in a separate message
-          const urgentNoFollowupActionsContent: ActionsContent = {
-            id: "urgent_no_followup_actions",
+Support contact information will be available closer to the event.`);
+          break;
+        */ // END BASECAMP URGENT SUPPORT
+        
+        case "join_groups":
+          // TODO: Re-enable when DevConnect groups are configured
+          await conversation.send("Group joining functionality coming soon! We'll have DevConnect event groups available closer to the event.");
+          
+          const joinGroupsFollowupActionsContent: ActionsContent = {
+            id: "join_groups_followup",
             description: "Is there anything else I can help with?",
             actions: [
               {
@@ -1113,8 +1082,18 @@ This is the best way to reach our support team for general questions, requests, 
               }
             ]
           };
-          await (conversation as any).send(urgentNoFollowupActionsContent, ContentTypeActions);
+          await (conversation as any).send(joinGroupsFollowupActionsContent, ContentTypeActions);
           break;
+        
+        // TODO: ADD DEVCONNECT 2025 GROUP JOIN CASES HERE
+        // When you have DevConnect group IDs, add cases like:
+        // case "join_staking_summit":
+        //   const { addMemberToActivityGroup } = await import("./services/agent/tools/activityGroups.js");
+        //   const result = await addMemberToActivityGroup("staking_summit", message.senderInboxId);
+        //   await conversation.send(result);
+        //   break;
+        
+        /* BASECAMP ACTIVITY GROUPS - COMMENTED OUT FOR DEVCONNECT
         case "join_yoga":
           const { addMemberToActivityGroup } = await import("./services/agent/tools/activityGroups.js");
           const yogaResult = await addMemberToActivityGroup("yoga", message.senderInboxId);
@@ -1286,10 +1265,12 @@ Is there anything else I can help with?`,
           const studentsResult = await addStudents("students", message.senderInboxId);
           await conversation.send(studentsResult);
           break;
+        */ // END BASECAMP ACTIVITY GROUPS
+        
         case "no_group_join":
           const noGroupJoinActionsContent: ActionsContent = {
             id: "no_group_join_followup",
-            description: `👍 No problem! Feel free to ask me about other activities or anything else regarding Basecamp 2025.
+            description: `👍 No problem! Feel free to ask me about other activities or anything else regarding DevConnect 2025.
 
 Is there anything else I can help with?`,
             actions: [
@@ -1393,7 +1374,7 @@ Is there anything else I can help with?`,
           // Send the main quick actions menu again
           const mainMenuActionsContent: ActionsContent = {
             id: "basecamp_welcome_actions",
-            description: "Hi! I'm Rocky the Basecamp Agent. Here are things I can help you with:",
+            description: "Hi! I'm Rocky the DevConnect Agent. Here are things I can help you with:",
             actions: [
               {
                 id: "schedule",

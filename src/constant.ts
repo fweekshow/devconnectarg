@@ -1,30 +1,57 @@
 import { DateTime } from "luxon";
 
-// Note: Venue details not yet announced on official website
+// DevConnect 2025 - Buenos Aires, Argentina
+// Main venue: La Rural (Devconnect Cube / World's Fair)
 
 // URLs and handles
-export const BASECAMP_URL = "https://www.basecamp2025.xyz";
-export const X_HANDLE = "@base";
+export const BASECAMP_URL = "https://devconnect.org/calendar";
+export const X_HANDLE = "@efdevconnect";
 
-// Timezone - Using Eastern Time as default (can be auto-detected)
-export const EVENT_TZ = "America/New_York";
+// Timezone - Buenos Aires, Argentina
+export const EVENT_TZ = "America/Argentina/Buenos_Aires";
 
 //Default Reply
 export const DEFAULT_REPLY =
   "Oops! I didn't understand your query. Could you please rephrase or provide more details?😅";
 
-// Event dates (September 14-16, 2025)
+// Event dates (November 15-23, 2025)
 export const EVENT_DATES = {
-  sunday: DateTime.fromObject(
-    { year: 2025, month: 9, day: 14 },
+  // Pre-event days
+  saturday_nov15: DateTime.fromObject(
+    { year: 2025, month: 11, day: 15 },
     { zone: EVENT_TZ },
   ),
-  monday: DateTime.fromObject(
-    { year: 2025, month: 9, day: 15 },
+  sunday_nov16: DateTime.fromObject(
+    { year: 2025, month: 11, day: 16 },
     { zone: EVENT_TZ },
   ),
-  tuesday: DateTime.fromObject(
-    { year: 2025, month: 9, day: 16 },
+  // Main DevConnect Cube days (La Rural World's Fair)
+  monday_nov17: DateTime.fromObject(
+    { year: 2025, month: 11, day: 17 },
+    { zone: EVENT_TZ },
+  ),
+  tuesday_nov18: DateTime.fromObject(
+    { year: 2025, month: 11, day: 18 },
+    { zone: EVENT_TZ },
+  ),
+  wednesday_nov19: DateTime.fromObject(
+    { year: 2025, month: 11, day: 19 },
+    { zone: EVENT_TZ },
+  ),
+  thursday_nov20: DateTime.fromObject(
+    { year: 2025, month: 11, day: 20 },
+    { zone: EVENT_TZ },
+  ),
+  friday_nov21: DateTime.fromObject(
+    { year: 2025, month: 11, day: 21 },
+    { zone: EVENT_TZ },
+  ),
+  saturday_nov22: DateTime.fromObject(
+    { year: 2025, month: 11, day: 22 },
+    { zone: EVENT_TZ },
+  ),
+  sunday_nov23: DateTime.fromObject(
+    { year: 2025, month: 11, day: 23 },
     { zone: EVENT_TZ },
   ),
 };
@@ -40,49 +67,16 @@ export const eventDateFor = (day: string) => {
 
 export const STAFF_WALLETS = [
   "0x22209CFC1397832f32160239C902B10A624cAB1A".toLowerCase(), // Mateo
-  "0x80245b9C0d2Ef322F2554922cA86Cf211a24047F".toLowerCase(), // Claudia
-  "0x40680ECd7e33653A2456bCbAE92DFC9dF2C67304".toLowerCase(), // Aneri
-  "0x2211d1D0020DAEA8039E46Cf1367962070d77DA9".toLowerCase(), // Jesse
-  "0xe88334fB1ACDc9eBDBcA530ce29e1a2DE42903c2".toLowerCase(), // John
-  "0x14D23FF0CB6A59F8CF3B389ca94BEf75c69a68e7".toLowerCase(), // Chintan
-  "0xf732FcD2C9C1Ca16F68a914401614869d39cA9d1".toLowerCase(), // Alex Chen
-  "0x605807906157A721669bAC96B64851CBdF64804B".toLowerCase(), // Ryan M
-  "0xBC3F713b37810538C191bA5dDf32D971EE643dDA".toLowerCase(), // Sarah W
-  "0x61bf19B5D245aBCdca67E868A706FA404e42a578".toLowerCase(), // testagent wallet
 ];
 
+// TODO: ADD DEVCONNECT 2025 GROUP KEYWORDS HERE
 // Group-related keywords for activity detection and group joining
-export const GROUP_KEYWORDS = [
-  // Physical Activities
-  "yoga",
-  "pickleball", 
-  "hiking",
-  "running",
-  
-  // Workshop Sessions
-  "builder",
-  "payments", 
-  "trenches",
-  "coding",
-  "ads",
-  "agents",
-  "video",
-  "roast",
-  "mini app",
-  "governance",
-  "deals",
-  "defi",
-  "network",
-  "coining",
-  "students"
+// Example: "staking_summit", "governance_day", "eth_day", etc.
+export const GROUP_KEYWORDS: string[] = [
+  // Add DevConnect event keywords here when available
 ];
 
 // export const AUTHORIZED_BASENAMES = [
-//     "0xteo.base.eth",
-//     "claudia.base.eth",
-//     "jesse.base.eth",
-//     "medusaxenon.base.eth",
-//     "kaelis.base.eth"
 //     // Add more basenames here for additional authorized users
 //     // "alice.base.eth",
 //     // "bob.base.eth",
