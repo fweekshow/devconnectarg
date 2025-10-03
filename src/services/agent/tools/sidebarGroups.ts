@@ -74,7 +74,7 @@ async function getSenderIdentifier(senderInboxId: string): Promise<string> {
 
 /**
  * Handle sidebar group creation request
- * Triggered by: "@devconnectarg sidebar this conversation GroupName" or "@devconnectarg sidebar GroupName"
+ * Triggered by: "@devconnectarg.base.eth sidebar GroupName" or "@devconnectarg sidebar GroupName"
  */
 export async function handleSidebarRequest(
   groupName: string,
@@ -273,11 +273,18 @@ export async function declineSidebarGroup(
 /**
  * Parse sidebar command from message content
  * Supports: "@devconnectarg sidebar this conversation GroupName" or "@devconnectarg sidebar GroupName"
+ * Also supports: "@devconnectarg.base.eth sidebar GroupName"
  * Also supports cleaned content: "sidebar this conversation GroupName" or "sidebar GroupName"
  */
 export function parseSidebarCommand(content: string): string | null {
-  // Try with @devconnectarg prefix first
-  let sidebarMatch = content.match(/@devconnectarg sidebar (?:this (?:conversation )?)?(.+)/i);
+  // Try with @devconnectarg.base.eth prefix first (full basename)
+  let sidebarMatch = content.match(/@devconnectarg\.base\.eth sidebar (?:this (?:conversation )?)?(.+)/i);
+  if (sidebarMatch) {
+    return sidebarMatch[1].trim();
+  }
+  
+  // Try with @devconnectarg prefix (short version)
+  sidebarMatch = content.match(/@devconnectarg sidebar (?:this (?:conversation )?)?(.+)/i);
   if (sidebarMatch) {
     return sidebarMatch[1].trim();
   }
@@ -291,8 +298,10 @@ export function parseSidebarCommand(content: string): string | null {
  * Check if message is a sidebar creation request
  */
 export function isSidebarRequest(content: string): boolean {
-  return content.toLowerCase().includes('@devconnectarg sidebar') || 
-         content.toLowerCase().startsWith('sidebar ');
+  const lowerContent = content.toLowerCase();
+  return lowerContent.includes('@devconnectarg.base.eth sidebar') ||
+         lowerContent.includes('@devconnectarg sidebar') || 
+         lowerContent.startsWith('sidebar ');
 }
 
 /**

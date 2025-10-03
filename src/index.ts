@@ -430,8 +430,33 @@ Respond with just "YES" if it's a greeting/engagement, or "NO" if it's a specifi
         senderAddress,
       );
 
-      if (isGreeting && isGreeting.toLowerCase().includes("yes")) {
+      // If not a greeting, check if it's gibberish/vague/unclear
+      let shouldShowQuickActions = isGreeting && isGreeting.toLowerCase().includes("yes");
+      
+      if (!shouldShowQuickActions) {
+        const gibberishCheckPrompt = `Is this message gibberish, vague, unclear, nonsensical, or lacking clear intent? Examples of gibberish: "asdf", "weeds", "xyz", "jfjfjf", random letters/words without meaning. Examples of vague: "stuff", "things", "idk", single unclear words.
+
+Message: "${cleanContent}"
+
+Respond with just "YES" if it's gibberish/vague/unclear, or "NO" if it has clear intent or is a real question.`;
+
+        const isGibberish = await agent.run(
+          gibberishCheckPrompt,
+          senderInboxId,
+          conversationId,
+          isGroup,
+          senderAddress,
+        );
+        
+        shouldShowQuickActions = isGibberish && isGibberish.toLowerCase().includes("yes");
+        if (shouldShowQuickActions) {
+          console.log("🤔 AI detected gibberish/vague message, sending Quick Actions...");
+        }
+      } else {
         console.log("👋 AI detected greeting/engagement, sending Quick Actions...");
+      }
+
+      if (shouldShowQuickActions) {
         try {
           // Create Quick Actions for welcome message using proper ActionsContent type
           const quickActionsContent: ActionsContent = {
@@ -444,13 +469,18 @@ Respond with just "YES" if it's a greeting/engagement, or "NO" if it's a specifi
                 style: "primary"
               },
               {
-                id: "set_reminder", 
-                label: "⏰ Set Reminder",
+                id: "wifi",
+                label: "📶 Wifi",
                 style: "secondary"
               },
               {
-                id: "event_info",
-                label: "ℹ️ Event Info", 
+                id: "shuttles",
+                label: "🚌 Shuttles",
+                style: "secondary"
+              },
+              {
+                id: "concierge_support",
+                label: "🎫 Concierge Support", 
                 style: "secondary"
               },
               {
@@ -892,6 +922,7 @@ async function main() {
       const agentId = client.inboxId.slice(0, 8);
       const agentActionPrefixes = [
         'basecamp_welcome_actions',
+        'devconnect_welcome_actions',
         'schedule_followup_actions', 
         'broadcast_',
         `devconnect_827491_${agentId}_sidebar_invite_`,
@@ -1466,13 +1497,18 @@ Is there anything else I can help with?`,
                 style: "primary"
               },
               {
-                id: "set_reminder", 
-                label: "⏰ Set Reminder",
+                id: "wifi",
+                label: "📶 Wifi",
                 style: "secondary"
               },
               {
-                id: "event_info",
-                label: "ℹ️ Event Info", 
+                id: "shuttles",
+                label: "🚌 Shuttles",
+                style: "secondary"
+              },
+              {
+                id: "concierge_support",
+                label: "🎫 Concierge Support",
                 style: "secondary"
               },
               {

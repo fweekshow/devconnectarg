@@ -15,13 +15,18 @@ export const sendWelcomeMessage = tool(
             style: "primary"
           },
           {
-            id: "set_reminder", 
-            label: "⏰ Set Reminder",
+            id: "wifi",
+            label: "📶 Wifi",
             style: "secondary"
           },
           {
-            id: "event_info",
-            label: "ℹ️ Event Info", 
+            id: "shuttles",
+            label: "🚌 Shuttles",
+            style: "secondary"
+          },
+          {
+            id: "concierge_support",
+            label: "🎫 Concierge Support", 
             style: "secondary"
           },
           {
