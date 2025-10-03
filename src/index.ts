@@ -288,7 +288,7 @@ async function handleMessage(message: DecodedMessage, client: Client) {
         return;
       }
       
-      // Check for admin command: @rocky addToGroup <address1> <address2> ...
+      // Check for admin command: @devconnectarg addToGroup <address1> <address2> ...
       if (cleanContent.toLowerCase().startsWith("addtogroup")) {
         
         // Only allow this command in group chats
@@ -298,11 +298,11 @@ async function handleMessage(message: DecodedMessage, client: Client) {
         }
         
         try {
-          // Parse the command: @rocky addToGroup <address1> <address2> ...
+          // Parse the command: @devconnectarg addToGroup <address1> <address2> ...
           const parts = cleanContent.split(' ').filter(part => part.trim() !== '');
           
           if (parts.length < 2) {
-            await conversation.send("❌ Usage: @rocky addToGroup <address1> <address2> ...\n\nExample: @rocky addToGroup 0x123... 0x456...\n\nI'll add them to this group!");
+            await conversation.send("❌ Usage: @devconnectarg addToGroup <address1> <address2> ...\n\nExample: @devconnectarg addToGroup 0x123... 0x456...\n\nI'll add them to this group!");
             return;
           }
           
@@ -884,20 +884,20 @@ async function main() {
       console.log(`🎯 Received Quick Action intent: ${actionId}`);
       console.log(`🎯 Full intent content:`, JSON.stringify(intentContent, null, 2));
       
-      // CRITICAL: Only respond to Quick Actions that Rocky initiated
-      // Check if the actions ID starts with Rocky's prefixes (including agent-specific namespacing)
+      // CRITICAL: Only respond to Quick Actions that this agent initiated
+      // Check if the actions ID starts with this agent's prefixes (including agent-specific namespacing)
       const agentId = client.inboxId.slice(0, 8);
-      const rockyActionPrefixes = [
+      const agentActionPrefixes = [
         'basecamp_welcome_actions',
         'schedule_followup_actions', 
         'broadcast_',
-        `rocky_${agentId}_sidebar_invite_`,
+        `devconnect_827491_${agentId}_sidebar_invite_`,
         'group_selection_actions',
         'urgent_message_actions'
       ];
       
-      // Also check for Rocky-generated action patterns
-      const rockyActionPatterns = [
+      // Also check for agent-generated action patterns
+      const agentActionPatterns = [
         '_question_with_join',
         '_group_join', 
         '_followup_actions',
@@ -909,16 +909,16 @@ async function main() {
         'no_group_join_followup'
       ];
       
-      const isRockyGeneratedAction = rockyActionPatterns.some(pattern => 
+      const isAgentGeneratedAction = agentActionPatterns.some(pattern => 
         originalActionsId?.includes(pattern)
       );
       
-      const isRockyAction = rockyActionPrefixes.some(prefix => 
+      const isAgentAction = agentActionPrefixes.some(prefix => 
         originalActionsId?.startsWith(prefix)
       );
       
-      if (!isRockyAction && !isRockyGeneratedAction) {
-        console.log(`⏭️ Skipping intent - not initiated by Rocky (ID: ${originalActionsId})`);
+      if (!isAgentAction && !isAgentGeneratedAction) {
+        console.log(`⏭️ Skipping intent - not initiated by this agent (ID: ${originalActionsId})`);
         continue;
       }
       
@@ -1085,13 +1085,24 @@ Support contact information will be available closer to the event.`);
           await (conversation as any).send(joinGroupsFollowupActionsContent, ContentTypeActions);
           break;
         
-        // TODO: ADD DEVCONNECT 2025 GROUP JOIN CASES HERE
-        // When you have DevConnect group IDs, add cases like:
-        // case "join_staking_summit":
-        //   const { addMemberToActivityGroup } = await import("./services/agent/tools/activityGroups.js");
-        //   const result = await addMemberToActivityGroup("staking_summit", message.senderInboxId);
-        //   await conversation.send(result);
-        //   break;
+        // DEVCONNECT 2025 GROUP JOIN CASES
+        case "join_ethcon_argentina":
+          const { addMemberToActivityGroup: addEthconArg } = await import("./services/agent/tools/activityGroups.js");
+          const ethconArgResult = await addEthconArg("ethcon_argentina", message.senderInboxId);
+          await conversation.send(ethconArgResult);
+          break;
+        
+        case "join_staking_summit":
+          const { addMemberToActivityGroup: addStakingSummit } = await import("./services/agent/tools/activityGroups.js");
+          const stakingSummitResult = await addStakingSummit("staking_summit", message.senderInboxId);
+          await conversation.send(stakingSummitResult);
+          break;
+        
+        case "join_builder_nights":
+          const { addMemberToActivityGroup: addBuilderNights } = await import("./services/agent/tools/activityGroups.js");
+          const builderNightsResult = await addBuilderNights("builder_nights", message.senderInboxId);
+          await conversation.send(builderNightsResult);
+          break;
         
         /* BASECAMP ACTIVITY GROUPS - COMMENTED OUT FOR DEVCONNECT
         case "join_yoga":
@@ -1410,16 +1421,16 @@ Is there anything else I can help with?`,
           break;
         default:
           // Handle sidebar group actions with dynamic IDs
-          if (actionId.startsWith(`rocky_${agentId}_join_sidebar_`)) {
-            const groupId = actionId.replace(`rocky_${agentId}_join_sidebar_`, '');
+          if (actionId.startsWith(`devconnect_827491_${agentId}_join_sidebar_`)) {
+            const groupId = actionId.replace(`devconnect_827491_${agentId}_join_sidebar_`, '');
             console.log(`🎯 User joining sidebar group: ${groupId}`);
             const joinResult = await joinSidebarGroup(groupId, message.senderInboxId);
             await conversation.send(joinResult);
             break;
           }
           
-          if (actionId.startsWith(`rocky_${agentId}_decline_sidebar_`)) {
-            const groupId = actionId.replace(`rocky_${agentId}_decline_sidebar_`, '');
+          if (actionId.startsWith(`devconnect_827491_${agentId}_decline_sidebar_`)) {
+            const groupId = actionId.replace(`devconnect_827491_${agentId}_decline_sidebar_`, '');
             console.log(`🎯 User declining sidebar group: ${groupId}`);
             const declineResult = await declineSidebarGroup(groupId, message.senderInboxId);
             await conversation.send(declineResult);

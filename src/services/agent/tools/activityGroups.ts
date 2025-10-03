@@ -60,30 +60,20 @@ export async function initializeAgentInGroups(): Promise<void> {
   }
 }
 
-// TODO: ADD DEVCONNECT 2025 ACTIVITY GROUP IDS HERE
+// DEVCONNECT 2025 ACTIVITY GROUP IDS
 // Activity group IDs - actual IDs from the groups the agent has access to
-// Example format:
-// const ACTIVITY_GROUPS = {
-//   staking_summit: "GROUP_ID_HERE",
-//   governance_day: "GROUP_ID_HERE",
-//   eth_day: "GROUP_ID_HERE",
-//   etc...
-// };
 const ACTIVITY_GROUPS = {
-  // Add DevConnect event group IDs here when available
+  ethcon_argentina: "f83c9ea8f01a5a76c0038c487e0747fd",
+  staking_summit: "6df533dc160bfdf8f9df6e859a4d05ef",
+  builder_nights: "66ffd36862150171d9940e4200e5a2a1",
 };
 
-// TODO: ADD DEVCONNECT 2025 ACTIVITY GROUP NAMES HERE
+// DEVCONNECT 2025 ACTIVITY GROUP NAMES
 // Activity group names for display
-// Example format:
-// const ACTIVITY_NAMES = {
-//   staking_summit: "🏔️ Staking Summit",
-//   governance_day: "🏛️ Governance Day",
-//   eth_day: "🎉 ETH Day",
-//   etc...
-// };
 const ACTIVITY_NAMES = {
-  // Add DevConnect event display names here when available
+  ethcon_argentina: "🇦🇷 ETHCON Argentina 2025",
+  staking_summit: "⛰️ Staking Summit",
+  builder_nights: "🔨 Builder Nights Buenos Aires",
 };
 
 // Function to add a user to an activity group
@@ -225,17 +215,12 @@ export function getAvailableActivities(): string[] {
   return Object.keys(ACTIVITY_GROUPS);
 }
 
-// TODO: ADD DEVCONNECT 2025 ACTIVITY GROUP MAPPINGS HERE
+// DEVCONNECT 2025 ACTIVITY GROUP MAPPINGS
 // Activity group mapping for quick actions
-// Example format:
-// export const ACTIVITY_GROUP_MAP = {
-//   'staking_summit': 'join_staking_summit',
-//   'governance_day': 'join_governance_day',
-//   'eth_day': 'join_eth_day',
-//   etc...
-// } as const;
 export const ACTIVITY_GROUP_MAP = {
-  // Add DevConnect event mappings here when available
+  'ethcon_argentina': 'join_ethcon_argentina',
+  'staking_summit': 'join_staking_summit',
+  'builder_nights': 'join_builder_nights',
 } as const;
 
 // Check if an activity has group chat functionality
@@ -281,20 +266,27 @@ Would you like me to add you to the ${displayName} @ DevConnect group chat?`,
   };
 }
 
-// TODO: UPDATE THIS WITH DEVCONNECT 2025 GROUP OPTIONS
 // Generate group selection quick actions for the main "Join Groups" button
 export function generateGroupSelectionQuickActions() {
   return {
     id: "group_selection_actions",
     description: "👥 Which DevConnect group would you like to join?",
     actions: [
-      // TODO: Add DevConnect event group options here
-      // Example:
-      // {
-      //   id: "join_staking_summit",
-      //   label: "🏔️ Staking Summit",
-      //   style: "primary"
-      // },
+      {
+        id: "join_ethcon_argentina",
+        label: "🇦🇷 ETHCON Argentina 2025",
+        style: "primary"
+      },
+      {
+        id: "join_staking_summit",
+        label: "⛰️ Staking Summit",
+        style: "primary"
+      },
+      {
+        id: "join_builder_nights",
+        label: "🔨 Builder Nights Buenos Aires",
+        style: "primary"
+      },
     ]
   };
 }

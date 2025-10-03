@@ -74,7 +74,7 @@ async function getSenderIdentifier(senderInboxId: string): Promise<string> {
 
 /**
  * Handle sidebar group creation request
- * Triggered by: "@rocky sidebar this conversation GroupName" or "@rocky sidebar GroupName"
+ * Triggered by: "@devconnectarg sidebar this conversation GroupName" or "@devconnectarg sidebar GroupName"
  */
 export async function handleSidebarRequest(
   groupName: string,
@@ -139,16 +139,16 @@ export async function handleSidebarRequest(
     const agentId = sidebarClient!.inboxId.slice(0, 8); // Use first 8 chars of inbox ID as unique identifier
     
     const invitationActions: ActionsContent = {
-      id: `rocky_${agentId}_sidebar_invite_${sidebarGroup.id}`,
+      id: `devconnect_827491_${agentId}_sidebar_invite_${sidebarGroup.id}`,
       description: `🎯 "${groupName}" sidebar group created! Would you like to join this focused discussion?`,
       actions: [
         {
-          id: `rocky_${agentId}_join_sidebar_${sidebarGroup.id}`,
+          id: `devconnect_827491_${agentId}_join_sidebar_${sidebarGroup.id}`,
           label: "✅ Yes, Join",
           style: "primary"
         },
         {
-          id: `rocky_${agentId}_decline_sidebar_${sidebarGroup.id}`,
+          id: `devconnect_827491_${agentId}_decline_sidebar_${sidebarGroup.id}`,
           label: "❌ No Thanks",
           style: "secondary"
         }
@@ -272,17 +272,17 @@ export async function declineSidebarGroup(
 
 /**
  * Parse sidebar command from message content
- * Supports: "@rocky sidebar this conversation GroupName" or "@rocky sidebar GroupName"
+ * Supports: "@devconnectarg sidebar this conversation GroupName" or "@devconnectarg sidebar GroupName"
  * Also supports cleaned content: "sidebar this conversation GroupName" or "sidebar GroupName"
  */
 export function parseSidebarCommand(content: string): string | null {
-  // Try with @rocky prefix first
-  let sidebarMatch = content.match(/@rocky sidebar (?:this (?:conversation )?)?(.+)/i);
+  // Try with @devconnectarg prefix first
+  let sidebarMatch = content.match(/@devconnectarg sidebar (?:this (?:conversation )?)?(.+)/i);
   if (sidebarMatch) {
     return sidebarMatch[1].trim();
   }
   
-  // Try without @rocky prefix (for cleaned content from groups)
+  // Try without @devconnectarg prefix (for cleaned content from groups)
   sidebarMatch = content.match(/^sidebar (?:this (?:conversation )?)?(.+)/i);
   return sidebarMatch ? sidebarMatch[1].trim() : null;
 }
@@ -291,7 +291,7 @@ export function parseSidebarCommand(content: string): string | null {
  * Check if message is a sidebar creation request
  */
 export function isSidebarRequest(content: string): boolean {
-  return content.toLowerCase().includes('@rocky sidebar') || 
+  return content.toLowerCase().includes('@devconnectarg sidebar') || 
          content.toLowerCase().startsWith('sidebar ');
 }
 
