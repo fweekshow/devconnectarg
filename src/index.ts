@@ -435,8 +435,8 @@ Respond with just "YES" if it's a greeting/engagement, or "NO" if it's a specifi
         try {
           // Create Quick Actions for welcome message using proper ActionsContent type
           const quickActionsContent: ActionsContent = {
-            id: "basecamp_welcome_actions",
-            description: "Hi! I'm Rocky the DevConnect Agent. Here are things I can help you with:",
+            id: "devconnect_welcome_actions",
+            description: "Hi! I'm the DevConnect 2025 Concierge. Here are things I can help you with:",
             actions: [
               {
                 id: "schedule",
@@ -444,23 +444,23 @@ Respond with just "YES" if it's a greeting/engagement, or "NO" if it's a specifi
                 style: "primary"
               },
               {
-                id: "wifi",
-                label: "📶 Wifi",
+                id: "set_reminder", 
+                label: "⏰ Set Reminder",
                 style: "secondary"
               },
               {
-                id: "shuttles",
-                label: "🚌 Shuttles",
-                style: "secondary"
-              },
-              {
-                id: "concierge_support",
-                label: "🎫 Concierge Support", 
+                id: "event_info",
+                label: "ℹ️ Event Info", 
                 style: "secondary"
               },
               {
                 id: "join_groups",
                 label: "👥 Join Groups",
+                style: "secondary"
+              },
+              {
+                id: "sponsored_slot",
+                label: "📣 Sponsored Slot",
                 style: "secondary"
               }
             ]
@@ -480,7 +480,7 @@ Respond with just "YES" if it's a greeting/engagement, or "NO" if it's a specifi
         } catch (quickActionsError) {
           console.error("❌ Error sending Quick Actions:", quickActionsError);
           // Fallback to regular text
-          await conversation.send("Hi! I'm Rocky the DevConnect Agent. I can help you with the Schedule, Set Reminders, or Concierge Support. What would you like to know?");
+          await conversation.send("Hi! I'm the DevConnect 2025 Concierge. I can help you with the Schedule, Set Reminders, Event Info, Join Groups, and Sponsored Slot information. What would you like to know?");
           addToConversationHistory(senderInboxId, cleanContent, "Welcome message sent (fallback)");
           return;
         }
@@ -689,7 +689,7 @@ Respond with only "YES" or "NO".`;
             console.error("❌ Error sending Quick Actions:", quickActionsError);
             console.log("🔄 Falling back to regular text response");
             // Fallback to regular text
-            await conversation.send("Hi! I'm Rocky the DevConnect Agent. I can help you with the Schedule, Set Reminders, or Concierge Support. What would you like to know?");
+            await conversation.send("Hi! I'm the DevConnect 2025 Concierge. I can help you with the Schedule, Set Reminders, Event Info, Join Groups, and Sponsored Slot information. What would you like to know?");
           }
         } else {
           // Regular text response with follow-up actions
@@ -784,8 +784,11 @@ async function main() {
     
     
     // Initialize agent in activity groups
-    const { initializeAgentInGroups } = await import("./services/agent/tools/activityGroups.js");
+    const { initializeAgentInGroups, listAllAgentGroups } = await import("./services/agent/tools/activityGroups.js");
     await initializeAgentInGroups();
+    
+    // Debug: List all groups agent has access to
+    await listAllAgentGroups();
 
     // Initialize reminder dispatcher
     const reminderDispatcher = createReminderDispatcher();
@@ -1063,12 +1066,21 @@ Support contact information will be available closer to the event.`);
         */ // END BASECAMP URGENT SUPPORT
         
         case "join_groups":
-          // TODO: Re-enable when DevConnect groups are configured
-          await conversation.send("Group joining functionality coming soon! We'll have DevConnect event groups available closer to the event.");
+          const { generateGroupSelectionQuickActions } = await import("./services/agent/tools/activityGroups.js");
+          const groupSelectionActions = generateGroupSelectionQuickActions();
+          await (conversation as any).send(groupSelectionActions, ContentTypeActions);
+          break;
+        
+        // DEVCONNECT 2025 GROUP JOIN CASES
+        case "join_ethcon_argentina":
+          const { addMemberToActivityGroup: addEthconArg } = await import("./services/agent/tools/activityGroups.js");
+          const ethconArgResult = await addEthconArg("ethcon_argentina", message.senderInboxId);
           
-          const joinGroupsFollowupActionsContent: ActionsContent = {
-            id: "join_groups_followup",
-            description: "Is there anything else I can help with?",
+          const ethconArgFollowupActionsContent: ActionsContent = {
+            id: "ethcon_argentina_join_followup",
+            description: `${ethconArgResult}
+
+Is there anything else I can help with?`,
             actions: [
               {
                 id: "show_main_menu",
@@ -1082,26 +1094,87 @@ Support contact information will be available closer to the event.`);
               }
             ]
           };
-          await (conversation as any).send(joinGroupsFollowupActionsContent, ContentTypeActions);
-          break;
-        
-        // DEVCONNECT 2025 GROUP JOIN CASES
-        case "join_ethcon_argentina":
-          const { addMemberToActivityGroup: addEthconArg } = await import("./services/agent/tools/activityGroups.js");
-          const ethconArgResult = await addEthconArg("ethcon_argentina", message.senderInboxId);
-          await conversation.send(ethconArgResult);
+          await (conversation as any).send(ethconArgFollowupActionsContent, ContentTypeActions);
           break;
         
         case "join_staking_summit":
           const { addMemberToActivityGroup: addStakingSummit } = await import("./services/agent/tools/activityGroups.js");
           const stakingSummitResult = await addStakingSummit("staking_summit", message.senderInboxId);
-          await conversation.send(stakingSummitResult);
+          
+          const stakingSummitFollowupActionsContent: ActionsContent = {
+            id: "staking_summit_join_followup",
+            description: `${stakingSummitResult}
+
+Is there anything else I can help with?`,
+            actions: [
+              {
+                id: "show_main_menu",
+                label: "✅ Yes",
+                style: "primary"
+              },
+              {
+                id: "end_conversation",
+                label: "❌ No",
+                style: "secondary"
+              }
+            ]
+          };
+          await (conversation as any).send(stakingSummitFollowupActionsContent, ContentTypeActions);
           break;
         
         case "join_builder_nights":
           const { addMemberToActivityGroup: addBuilderNights } = await import("./services/agent/tools/activityGroups.js");
           const builderNightsResult = await addBuilderNights("builder_nights", message.senderInboxId);
-          await conversation.send(builderNightsResult);
+          
+          const builderNightsFollowupActionsContent: ActionsContent = {
+            id: "builder_nights_join_followup",
+            description: `${builderNightsResult}
+
+Is there anything else I can help with?`,
+            actions: [
+              {
+                id: "show_main_menu",
+                label: "✅ Yes",
+                style: "primary"
+              },
+              {
+                id: "end_conversation",
+                label: "❌ No",
+                style: "secondary"
+              }
+            ]
+          };
+          await (conversation as any).send(builderNightsFollowupActionsContent, ContentTypeActions);
+          break;
+        
+        case "sponsored_slot":
+          const sponsoredSlotMessage = `📣 Sponsored Slot
+
+Sponsors can have their organization's event featured in this slot.
+
+📧 Please reach out to Mateo:
+• Base App: 0xteo.base.eth
+• Twitter: @0xTeo`;
+          
+          const sponsoredSlotFollowupActionsContent: ActionsContent = {
+            id: "sponsored_slot_followup",
+            description: `${sponsoredSlotMessage}
+
+Is there anything else I can help with?`,
+            actions: [
+              {
+                id: "show_main_menu",
+                label: "✅ Yes",
+                style: "primary"
+              },
+              {
+                id: "end_conversation",
+                label: "❌ No",
+                style: "secondary"
+              }
+            ]
+          };
+          await (conversation as any).send(sponsoredSlotFollowupActionsContent, ContentTypeActions);
           break;
         
         /* BASECAMP ACTIVITY GROUPS - COMMENTED OUT FOR DEVCONNECT
@@ -1384,8 +1457,8 @@ Is there anything else I can help with?`,
         case "show_main_menu":
           // Send the main quick actions menu again
           const mainMenuActionsContent: ActionsContent = {
-            id: "basecamp_welcome_actions",
-            description: "Hi! I'm Rocky the DevConnect Agent. Here are things I can help you with:",
+            id: "devconnect_welcome_actions",
+            description: "Hi! I'm the DevConnect 2025 Concierge. Here are things I can help you with:",
             actions: [
               {
                 id: "schedule",
@@ -1393,23 +1466,23 @@ Is there anything else I can help with?`,
                 style: "primary"
               },
               {
-                id: "wifi",
-                label: "📶 Wifi",
+                id: "set_reminder", 
+                label: "⏰ Set Reminder",
                 style: "secondary"
               },
               {
-                id: "shuttles",
-                label: "🚌 Shuttles",
-                style: "secondary"
-              },
-              {
-                id: "concierge_support",
-                label: "🎫 Concierge Support",
+                id: "event_info",
+                label: "ℹ️ Event Info", 
                 style: "secondary"
               },
               {
                 id: "join_groups",
                 label: "👥 Join Groups",
+                style: "secondary"
+              },
+              {
+                id: "sponsored_slot",
+                label: "📣 Sponsored Slot",
                 style: "secondary"
               }
             ]

@@ -63,8 +63,8 @@ export async function initializeAgentInGroups(): Promise<void> {
 // DEVCONNECT 2025 ACTIVITY GROUP IDS
 // Activity group IDs - actual IDs from the groups the agent has access to
 const ACTIVITY_GROUPS = {
-  ethcon_argentina: "f83c9ea8f01a5a76c0038c487e0747fd",
-  staking_summit: "6df533dc160bfdf8f9df6e859a4d05ef",
+  ethcon_argentina: "6df533dc160bfdf8f9df6e859a4d05ef",
+  staking_summit: "f83c9ea8f01a5a76c0038c487e0747fd",
   builder_nights: "66ffd36862150171d9940e4200e5a2a1",
 };
 
@@ -213,6 +213,27 @@ export function getActivityGroupInfo(activity: keyof typeof ACTIVITY_GROUPS): { 
 // List all available activity groups
 export function getAvailableActivities(): string[] {
   return Object.keys(ACTIVITY_GROUPS);
+}
+
+// Debug function to list all groups the agent has access to
+export async function listAllAgentGroups(): Promise<void> {
+  if (!groupClient) {
+    console.log("❌ Group client not initialized");
+    return;
+  }
+  
+  console.log("🔄 Syncing conversations...");
+  await groupClient.conversations.sync();
+  const allConversations = await groupClient.conversations.list();
+  
+  console.log(`\n📋 All groups the agent has access to:`);
+  allConversations.filter(c => c.constructor.name === 'Group').forEach(conv => {
+    const details = conv as any;
+    console.log(`  - ID: ${conv.id}`);
+    console.log(`    Name: ${details.name || 'No name'}`);
+    console.log(`    Description: ${details.description || 'No description'}`);
+    console.log(``);
+  });
 }
 
 // DEVCONNECT 2025 ACTIVITY GROUP MAPPINGS

@@ -28,6 +28,11 @@ export const sendWelcomeMessage = tool(
             id: "join_groups",
             label: "👥 Join Groups",
             style: "secondary"
+          },
+          {
+            id: "sponsored_slot",
+            label: "📣 Sponsored Slot",
+            style: "secondary"
           }
         ]
       }
