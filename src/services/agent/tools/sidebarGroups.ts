@@ -1,5 +1,7 @@
 import type { Client, DecodedMessage, Conversation } from "@xmtp/node-sdk";
 import { ContentTypeActions, type ActionsContent } from "../../../xmtp-inline-actions/types/ActionsContent.js";
+import { getName } from "@coinbase/onchainkit/identity";
+import { base } from "viem/chains";
 
 interface SidebarGroup {
   id: string;
@@ -18,6 +20,56 @@ let sidebarClient: Client<any> | null = null;
 
 export function setSidebarClient(client: Client<any>) {
   sidebarClient = client;
+}
+
+// Function to resolve inbox ID to basename with fallback to wallet address
+async function getSenderIdentifier(senderInboxId: string): Promise<string> {
+  try {
+    console.log(`🔍 Resolving sender identifier for inbox ${senderInboxId}...`);
+    
+    if (!sidebarClient) {
+      console.log("⚠️ Sidebar client not available");
+      return `inbox-${senderInboxId.slice(0, 6)}...`;
+    }
+    
+    // Get the user's address from XMTP inbox state
+    const inboxState = await sidebarClient.preferences.inboxStateFromInboxIds([senderInboxId]);
+    const addressFromInboxId = inboxState[0]?.identifiers[0]?.identifier;
+    
+    if (!addressFromInboxId) {
+      console.log("⚠️ Could not resolve wallet address from inbox ID");
+      return `inbox-${senderInboxId.slice(0, 6)}...`;
+    }
+    
+    console.log(`📋 Resolved inbox ID to address: ${addressFromInboxId}`);
+    
+    // Ensure address is properly formatted
+    const formattedAddress = addressFromInboxId.toLowerCase().startsWith('0x') 
+      ? addressFromInboxId as `0x${string}`
+      : `0x${addressFromInboxId}` as `0x${string}`;
+    
+    try {
+      // Try to resolve address to basename using OnchainKit
+      const basename = await getName({ 
+        address: formattedAddress, 
+        chain: base 
+      });
+      
+      // If basename exists, use it; otherwise fall back to truncated address
+      const displayName = basename || `${formattedAddress.slice(0, 6)}...${formattedAddress.slice(-4)}`;
+      
+      console.log(`✅ Final display name: ${displayName}`);
+      return displayName;
+      
+    } catch (basenameError) {
+      console.log(`⚠️ Basename resolution failed, using wallet address:`, basenameError);
+      return `${formattedAddress.slice(0, 6)}...${formattedAddress.slice(-4)}`;
+    }
+    
+  } catch (error) {
+    console.error(`❌ Failed to get sender identifier:`, error);
+    return `inbox-${senderInboxId.slice(0, 6)}...`;
+  }
 }
 
 /**
@@ -181,21 +233,15 @@ The sidebar group is available and you can try again later!`;
     sidebarGroupData.members.push(userInboxId);
     sidebarGroups.set(groupId, sidebarGroupData);
 
-    // Send a welcome message to help the user identify the group
-    await sidebarGroup.send(`🎉 ${userInboxId} joined the "${sidebarGroupData.name}" sidebar discussion!`);
+    // Get the user's display name (basename or address)
+    const userDisplayName = await getSenderIdentifier(userInboxId);
 
-    // Get agent's actual address properly
-    const inboxState = await sidebarClient!.preferences.inboxState();
-    const agentAddress = inboxState.identifiers[0]?.identifier || 'unknown';
-    
-    // For now, use agent DM deeplink since group deeplink format is unclear
-    const agentDeeplink = `cbwallet://messaging/${agentAddress}`;
+    // Send a welcome message to help the user identify the group
+    await sidebarGroup.send(`🎉 ${userDisplayName} joined the "${sidebarGroupData.name}" sidebar discussion!`);
 
     return `✅ Great! You're now in "${sidebarGroupData.name}" sidebar group.
 
-💬 **Message me to access the group:** ${agentDeeplink}
-
-You'll receive messages and can participate in this focused discussion! Check your group conversations for the new sidebar.`;
+You'll receive messages and can participate in this focused discussion!`;
 
   } catch (error: any) {
     console.error("❌ Error joining sidebar group:", error);

@@ -896,11 +896,28 @@ async function main() {
         'urgent_message_actions'
       ];
       
+      // Also check for Rocky-generated action patterns
+      const rockyActionPatterns = [
+        '_question_with_join',
+        '_group_join', 
+        '_followup_actions',
+        '_followup',
+        'question_response_followup',
+        'response_followup_actions',
+        'concierge_support_actions',
+        'join_events_text_confirmation',
+        'no_group_join_followup'
+      ];
+      
+      const isRockyGeneratedAction = rockyActionPatterns.some(pattern => 
+        originalActionsId?.includes(pattern)
+      );
+      
       const isRockyAction = rockyActionPrefixes.some(prefix => 
         originalActionsId?.startsWith(prefix)
       );
       
-      if (!isRockyAction) {
+      if (!isRockyAction && !isRockyGeneratedAction) {
         console.log(`⏭️ Skipping intent - not initiated by Rocky (ID: ${originalActionsId})`);
         continue;
       }

@@ -69,7 +69,14 @@ export const getEncryptionKeyFromHex = (hex: string) => {
 
 export const getDbPath = (description: string = "xmtp") => {
   //Checks if the environment is a Railway deployment
-  const volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH ?? ".data/xmtp";
+  let volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH ?? ".data/xmtp";
+  
+  // Use a different path for test wallet to avoid database conflicts
+  const isTestWallet = process.env.TEST_WALLET === "true";
+  if (isTestWallet) {
+    volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH ?? ".data/xmtp-test";
+  }
+  
   // Create database directory if it doesn't exist
   if (!fs.existsSync(volumePath)) {
     fs.mkdirSync(volumePath, { recursive: true });
