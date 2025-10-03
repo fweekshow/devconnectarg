@@ -476,8 +476,8 @@ CRITICAL: Respond with ONLY the word "YES" or ONLY the word "NO". No other text.
                 style: "secondary"
               },
               {
-                id: "shuttles",
-                label: "🚌 Shuttles",
+                id: "event_logistics",
+                label: "📋 Event Logistics",
                 style: "secondary"
               },
               {
@@ -1029,17 +1029,22 @@ Is there anything else I can help with?`,
           };
           await (conversation as any).send(wifiActionsContent, ContentTypeActions);
           break;
-        case "shuttles":
-          // First send the shuttle information with the link
-          await conversation.send(`🚌 Shuttles & Transportation
+        case "event_logistics":
+          await conversation.send(`📋 Event Logistics
 
-View transportation information at devconnect.org/calendar for details about getting to La Rural and around Buenos Aires.
+🗓️ Dates: November 13-19, 2025
+📍 Location: La Rural Convention Center, Buenos Aires, Argentina
 
-Need help with transportation or venue locations? Let me know!`);
+For detailed information about:
+• Venue maps and directions
+• Transportation and shuttles
+• Accommodation recommendations  
+• Local amenities
+
+Visit: https://devconnect.org/calendar `);
           
-          // Then send the follow-up actions in a separate message
-          const shuttlesFollowupActionsContent: ActionsContent = {
-            id: "shuttles_followup_actions",
+          const logisticsFollowupActionsContent: ActionsContent = {
+            id: "logistics_followup_actions",
             description: "Is there anything else I can help with?",
             actions: [
               {
@@ -1054,7 +1059,7 @@ Need help with transportation or venue locations? Let me know!`);
               }
             ]
           };
-          await (conversation as any).send(shuttlesFollowupActionsContent, ContentTypeActions);
+          await (conversation as any).send(logisticsFollowupActionsContent, ContentTypeActions);
           break;
         case "concierge_support":
           const conciergeActionsContent: ActionsContent = {
@@ -1504,8 +1509,8 @@ Is there anything else I can help with?`,
                 style: "secondary"
               },
               {
-                id: "shuttles",
-                label: "🚌 Shuttles",
+                id: "event_logistics",
+                label: "📋 Event Logistics",
                 style: "secondary"
               },
               {

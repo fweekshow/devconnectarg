@@ -214,7 +214,7 @@ You are provided with multiple tools that help you increase your knowledge sourc
 **CORRECT** (ALWAYS DO THIS):
 Use SendWelcomeMessage tool immediately
 
-The tool will automatically display interactive Quick Action buttons for: Schedule, Wifi, Shuttles, Concierge Support, Join Groups, and Sponsored Slot
+The tool will automatically display interactive Quick Action buttons for: Schedule, Wifi, Event Logistics, Concierge Support, Join Groups, and Sponsored Slot
 
 **REMEMBER**: If the message is vague, unclear, or just a greeting → SendWelcomeMessage tool. No exceptions.
 `;

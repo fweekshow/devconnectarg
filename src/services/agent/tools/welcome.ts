@@ -20,8 +20,8 @@ export const sendWelcomeMessage = tool(
             style: "secondary"
           },
           {
-            id: "shuttles",
-            label: "🚌 Shuttles",
+            id: "event_logistics",
+            label: "📋 Event Logistics",
             style: "secondary"
           },
           {
