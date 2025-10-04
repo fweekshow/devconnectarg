@@ -132,35 +132,13 @@ export const SCHEDULE_DATA = {
 // Removed fetchBasecampScheduleDetails - using more specific tools instead
 
 export const getFullSchedule = tool(
-  async ({ day, query }: { day?: string; query?: string }) => { 
-    console.log("🔄 Getting full schedule...", { day, query });
+  async ({ day, searchAllDays }: { day?: string; searchAllDays?: boolean }) => { 
+    console.log("🔄 Getting full schedule...", { day, searchAllDays });
     
-    // If there's a specific query, search for relevant content
-    if (query) {
-      const queryLower = query.toLowerCase();
-      console.log("🔍 Searching schedule for:", queryLower);
-      
-      // Search through all schedule data for relevant content
-      const results: string[] = [];
-      
-      // Search through all days
-      Object.entries(SCHEDULE_DATA).forEach(([dayKey, dayData]) => {
-        const dayTitle = dayData.title;
-        
-        if (dayData.events) {
-          dayData.events.forEach((event: string) => {
-          if (event.toLowerCase().includes(queryLower)) {
-              results.push(`${dayTitle}: ${event}`);
-            }
-          });
-        }
-      });
-      
-      if (results.length > 0) {
-        return `Here are the events related to "${query}":\n\n${results.join('\n\n')}`;
-      } else {
-        return `I couldn't find any specific events about "${query}" in the schedule. Try asking about specific event names or topics like "staking", "DeFi", "privacy", "hackathon", etc.`;
-      }
+    // If user is asking about a specific event (not a specific day), return ALL days so AI can search
+    if (searchAllDays) {
+      console.log("🔍 Returning complete schedule for all days for AI to search");
+      return JSON.stringify(SCHEDULE_DATA);
     }
     
     // If specific day requested, return that day's schedule
@@ -189,15 +167,15 @@ export const getFullSchedule = tool(
     
     console.log(`🔍 Current date: ${now.toFormat('yyyy-MM-dd HH:mm')} ET (day ${dayOfMonth}), determined day: ${currentDay}`);
     
-    // Return current day's schedule
+    // Return current day's schedule - AI will semantically search through it
     return JSON.stringify(SCHEDULE_DATA[currentDay as keyof typeof SCHEDULE_DATA]);
   },
   {
     name: "GetFullSchedule",
-    description: "Use this tool to get the full schedule for DevConnect 2025. This tool contains the complete accurate schedule data for November 15-23, 2025. Also use for activity and event questions.",
+    description: "Use this tool to get schedule data for DevConnect 2025 (Nov 15-23, 2025). Returns schedule data that the AI will search through to answer the user's question. Use searchAllDays=true when user asks about a SPECIFIC EVENT/ACTIVITY (like 'When is Staking Summit', 'When is Web3Design') so you can search across all days. Use day parameter when user asks about a SPECIFIC DAY (like 'Monday schedule', 'What's on Tuesday'). Leave both empty for today's schedule.",
     schema: z.object({
-      day: z.string().optional().describe("The day to get schedule for (e.g., 'saturday_nov15', 'monday_nov17', etc.)"),
-      query: z.string().optional().describe("The specific question or activity being asked about"),
+      day: z.string().optional().describe("Specific day: 'saturday_nov15', 'sunday_nov16', 'monday_nov17', 'tuesday_nov18', 'wednesday_nov19', 'thursday_nov20', 'friday_nov21', 'saturday_nov22', 'sunday_nov23'. Only use when user asks about a specific day."),
+      searchAllDays: z.boolean().optional().describe("Set to true when user asks about a specific event/activity by name (not a specific day). This returns all days so AI can find which day the event is on."),
     }),
   }
 );
@@ -359,7 +337,7 @@ export const getActivityTime = tool(
   },
   {
     name: "GetActivityTime",
-    description: "Use when someone asks about timing for a specific DevConnect event or activity like 'What time is Staking Summit?', 'When is ETH Day?', 'What time is the opening ceremony?'. Parameters: activity (string) - the event/activity they're asking about, day (optional string) - the specific day if mentioned",
+    description: "Use when someone asks about timing for a specific activity like 'What time is pickleball?', 'When is yoga?', 'What time?'. Parameters: activity (string) - the activity they're asking about, day (optional string) - Monday or Tuesday",
     schema: z.object({
       activity: z.string().describe("The DevConnect event or activity they're asking about"),
       day: z.string().describe("The day to get activity time"),

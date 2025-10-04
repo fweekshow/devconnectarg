@@ -436,7 +436,11 @@ CRITICAL: Respond with ONLY the word "YES" or ONLY the word "NO". No other text.
       let shouldShowQuickActions = isGreeting === "YES";
       
       if (!shouldShowQuickActions) {
-        const gibberishCheckPrompt = `Is this message gibberish, vague, unclear, nonsensical, or lacking clear intent? Examples of gibberish: "asdf", "weeds", "xyz", "jfjfjf", random letters/words without meaning. Examples of vague: "stuff", "things", "idk", single unclear words.
+        const gibberishCheckPrompt = `Is this message gibberish, vague, unclear, nonsensical, or lacking clear intent? 
+
+GIBBERISH (respond YES): "asdf", "weeds", "xyz", "jfjfjf", random letters/words without meaning, "stuff", "things", "idk", single unclear words with no context.
+
+NOT GIBBERISH (respond NO): ANY question with "when", "what", "where", "how", "who", "why", ANY event/activity names, ANY specific requests.
 
 Message: "${cleanContent}"
 
