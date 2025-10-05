@@ -903,8 +903,10 @@ async function main() {
       continue;
     }
 
-    // Debug: Log all message types
+    // Debug: Log all message types with sender info
     console.log(`📨 Message received - Type: ${message?.contentType?.typeId}, Content: ${typeof message?.content}`);
+    console.log(`   From InboxId: ${message?.senderInboxId}`);
+    console.log(`   ConversationId: ${message?.conversationId}`);
     console.log(`📨 Expected intent type: ${ContentTypeIntent.toString()}`);
     
     // Debug intent messages specifically
