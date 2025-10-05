@@ -16,6 +16,9 @@ interface SidebarGroup {
 const sidebarGroups = new Map<string, SidebarGroup>();
 const pendingInvitations = new Map<string, { groupId: string; originalGroupId: string }>();
 
+// Bankr's inbox ID - automatically added to all sidebar groups
+const BANKR_INBOX_ID = "062b31e55329b63c5eb6889e89893ac40a5680e97b2bd2444ae98cb0af72fa9b";
+
 let sidebarClient: Client<any> | null = null;
 
 export function setSidebarClient(client: Client<any>) {
@@ -97,6 +100,15 @@ export async function handleSidebarRequest(
     
     console.log(`✅ Created sidebar group: ${sidebarGroup.id}`);
 
+    // Step 1.5: Automatically add bankr to all sidebar groups
+    try {
+      await (sidebarGroup as any).addMembers([BANKR_INBOX_ID]);
+      console.log(`✅ Added bankr to sidebar group: ${BANKR_INBOX_ID}`);
+    } catch (bankrError: any) {
+      console.log(`⚠️ Could not add bankr to sidebar group: ${bankrError.message}`);
+      // Continue anyway - the group still works
+    }
+
     // Step 2: Set the group name after creation
     try {
       const currentName = (sidebarGroup as any).name;
@@ -115,7 +127,7 @@ export async function handleSidebarRequest(
       originalGroupId: originalGroupId,
       createdBy: requesterInboxId,
       createdAt: new Date(),
-      members: [requesterInboxId] // Agent is automatically included
+      members: [requesterInboxId, BANKR_INBOX_ID] // Agent and bankr are automatically included
     };
     
     sidebarGroups.set(sidebarGroup.id, sidebarGroupData);
@@ -275,6 +287,7 @@ export async function declineSidebarGroup(
  * Supports: "@devconnectarg sidebar this conversation GroupName" or "@devconnectarg sidebar GroupName"
  * Also supports: "@devconnectarg.base.eth sidebar GroupName"
  * Also supports cleaned content: "sidebar this conversation GroupName" or "sidebar GroupName"
+ * Also supports: ".base.eth sidebar GroupName" (after mention removal)
  */
 export function parseSidebarCommand(content: string): string | null {
   // Try with @devconnectarg.base.eth prefix first (full basename)
@@ -289,7 +302,13 @@ export function parseSidebarCommand(content: string): string | null {
     return sidebarMatch[1].trim();
   }
   
-  // Try without @devconnectarg prefix (for cleaned content from groups)
+  // Try with .base.eth sidebar (cleaned content after mention removal)
+  sidebarMatch = content.match(/\.base\.eth sidebar (?:this (?:conversation )?)?(.+)/i);
+  if (sidebarMatch) {
+    return sidebarMatch[1].trim();
+  }
+  
+  // Try without any prefix (for cleaned content from groups)
   sidebarMatch = content.match(/^sidebar (?:this (?:conversation )?)?(.+)/i);
   return sidebarMatch ? sidebarMatch[1].trim() : null;
 }
@@ -301,6 +320,7 @@ export function isSidebarRequest(content: string): boolean {
   const lowerContent = content.toLowerCase();
   return lowerContent.includes('@devconnectarg.base.eth sidebar') ||
          lowerContent.includes('@devconnectarg sidebar') || 
+         lowerContent.includes('.base.eth sidebar') || // Handles cleaned content after mention removal
          lowerContent.startsWith('sidebar ');
 }
 
