@@ -114,6 +114,9 @@ deployment-secrets.json
 *-scraper.js
 *-fetcher.js
 
+# Installation management scripts (contain hardcoded inbox IDs)
+clear-installations.mjs
+
 # Any files containing credentials or tokens
 *credentials*
 *tokens*
