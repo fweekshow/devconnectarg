@@ -35,8 +35,13 @@ export const sendWelcomeMessage = tool(
             style: "secondary"
           },
           {
-            id: "sponsored_slot",
-            label: "📣 Sponsored Slot",
+            id: "base_info",
+            label: "🔵 Base",
+            style: "secondary"
+          },
+          {
+            id: "xmtp_info",
+            label: "💬 XMTP",
             style: "secondary"
           }
         ]

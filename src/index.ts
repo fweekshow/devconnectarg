@@ -182,8 +182,10 @@ async function handleMessage(message: DecodedMessage, client: Client) {
       console.log(`🤖 Processing message: "${cleanContent}"`);
       
       // Check for sidebar group creation requests (only in groups)
+      console.log(`🔍 isGroup: ${isGroup}, isSidebarRequest: ${isSidebarRequest(cleanContent)}`);
       if (isGroup && isSidebarRequest(cleanContent)) {
         const groupName = parseSidebarCommand(cleanContent);
+        console.log(`🔍 Parsed group name: "${groupName}"`);
         if (groupName) {
           console.log(`🎯 Processing sidebar group request: "${groupName}"`);
           const sidebarResponse = await handleSidebarRequest(groupName, message, client, conversation);
@@ -495,8 +497,13 @@ CRITICAL: Respond with ONLY the word "YES" or ONLY the word "NO". No other text.
                 style: "secondary"
               },
               {
-                id: "sponsored_slot",
-                label: "📣 Sponsored Slot",
+                id: "base_info",
+                label: "🔵 Base",
+                style: "secondary"
+              },
+              {
+                id: "xmtp_info",
+                label: "💬 XMTP",
                 style: "secondary"
               }
             ]
@@ -909,6 +916,15 @@ async function main() {
     console.log(`   ConversationId: ${message?.conversationId}`);
     console.log(`📨 Expected intent type: ${ContentTypeIntent.toString()}`);
     
+    // Log group creation/update events
+    if (message?.contentType?.typeId === "group_updated") {
+      const groupContent = message.content as any;
+      console.log(`👥 GROUP UPDATED EVENT:`);
+      console.log(`   Initiated by InboxId: ${groupContent?.initiatedByInboxId || message?.senderInboxId}`);
+      console.log(`   Group ID: ${message?.conversationId}`);
+      console.log(`   Update type: ${JSON.stringify(groupContent)}`);
+    }
+    
     // Debug intent messages specifically
     if (message?.contentType?.typeId === "intent") {
       console.log(`🎯 Intent message detected! Content:`, JSON.stringify(message.content, null, 2));
@@ -1191,18 +1207,24 @@ Is there anything else I can help with?`,
           await (conversation as any).send(builderNightsFollowupActionsContent, ContentTypeActions);
           break;
         
-        case "sponsored_slot":
-          const sponsoredSlotMessage = `📣 Sponsored Slot
+        case "base_info":
+          const baseMessage = `🔵 Base
 
-Sponsors can have their organization's event featured in this slot.
+Base is an Ethereum L2 built by Coinbase, incubated inside the company.
 
-📧 Please reach out to Mateo:
+🌐 Learn more: https://base.org 
+📱 Base App: https://base.org/apps 
+
+📣 Sponsored Opportunity:
+Selected winners from Base Batches will be featured inside Rocky @ DevConnect!
+
+📧 Contact Mateo:
 • Base App: 0xteo.base.eth
 • Twitter: @0xTeo`;
           
-          const sponsoredSlotFollowupActionsContent: ActionsContent = {
-            id: "sponsored_slot_followup",
-            description: `${sponsoredSlotMessage}
+          const baseFollowupActionsContent: ActionsContent = {
+            id: "base_info_followup",
+            description: `${baseMessage}
 
 Is there anything else I can help with?`,
             actions: [
@@ -1218,7 +1240,38 @@ Is there anything else I can help with?`,
               }
             ]
           };
-          await (conversation as any).send(sponsoredSlotFollowupActionsContent, ContentTypeActions);
+          await (conversation as any).send(baseFollowupActionsContent, ContentTypeActions);
+          break;
+        
+        case "xmtp_info":
+          const xmtpMessage = `💬 XMTP
+
+XMTP (Extensible Message Transport Protocol) is an open protocol for secure, decentralized messaging.
+
+🌐 Learn more: https://xmtp.org 
+📱 Try it: Download Converse or Base App to message on XMTP
+
+This agent runs on XMTP! All messages you send here are private and decentralized.`;
+          
+          const xmtpFollowupActionsContent: ActionsContent = {
+            id: "xmtp_info_followup",
+            description: `${xmtpMessage}
+
+Is there anything else I can help with?`,
+            actions: [
+              {
+                id: "show_main_menu",
+                label: "✅ Yes",
+                style: "primary"
+              },
+              {
+                id: "end_conversation",
+                label: "❌ No",
+                style: "secondary"
+              }
+            ]
+          };
+          await (conversation as any).send(xmtpFollowupActionsContent, ContentTypeActions);
           break;
         
         /* BASECAMP ACTIVITY GROUPS - COMMENTED OUT FOR DEVCONNECT
@@ -1530,8 +1583,13 @@ Is there anything else I can help with?`,
                 style: "secondary"
               },
               {
-                id: "sponsored_slot",
-                label: "📣 Sponsored Slot",
+                id: "base_info",
+                label: "🔵 Base",
+                style: "secondary"
+              },
+              {
+                id: "xmtp_info",
+                label: "💬 XMTP",
                 style: "secondary"
               }
             ]

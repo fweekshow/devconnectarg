@@ -3,7 +3,7 @@ import { MENTION_HANDLES } from "./config.js";
 // Create regex for detecting mentions
 const createMentionRegex = (): RegExp => {
   const mentionAlternatives = MENTION_HANDLES.split(",")
-    .map((h) => h.trim().replace(/\./g, '\\.')) // Escape dots in basenames
+    .map((h) => h.trim())
     .join("|");
   return new RegExp(`(^|\\s)@\\s*(?:${mentionAlternatives})\\b`, "i");
 };
