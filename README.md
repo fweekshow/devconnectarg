@@ -195,39 +195,52 @@ SCHEDULE_DATA = {
 **Purpose**: Manages time-based reminders for users.
 
 **How it works**:
-1. User requests a reminder at a specific time
-2. Bot converts to UTC and stores in SQLite database
-3. Background process checks for due reminders
-4. Sends reminder message to user at specified time
-5. Supports timezone conversions (user time ↔ event time)
+1. User requests a reminder using natural language or ISO-like time
+2. Time is interpreted in the user's local timezone and converted to UTC for storage
+3. Background dispatcher checks every 30 seconds for due reminders
+4. Reminder is delivered only to the original conversation where it was created (privacy-safe)
+5. Responses show both the user's local time and the event time reference
 
 **Key Features**:
-- **Flexible Time Input**: ISO format, simple format, or natural language
-- **Timezone Support**: Automatically converts between user and event timezones
-- **List Reminders**: View all pending reminders
-- **Cancel Reminders**: Delete specific or all reminders
-- **SQLite Storage**: Persistent reminder storage
-- **Background Processing**: Automatic reminder delivery
+- **Natural Language Parsing**: Uses chrono-node (e.g., "tomorrow at 2pm to check in")
+- **Relative Times**: "in 2 minutes", "in 3 hours", "in 2 days"
+- **Timezone Handling**: Auto-detects user timezone; converts to UTC; shows event timezone
+- **Future-Time Validation**: Prevents setting reminders in the past
+- **List Pending**: Show all pending reminders for your inbox with dual-time display
+- **Cancel Controls**: Cancel a specific reminder by ID or cancel all
+- **Privacy Fix**: Each reminder is tied to the specific `conversationId`; delivery is not broadcast to all threads
+- **Background Processing**: Dispatcher runs every 30 seconds
 
-**Usage Examples**:
+**Reminder Commands (DMs only)**:
 ```
-User: "Remind me about the keynote tomorrow at 2pm"
-User: "Remind me in 30 minutes"
-User: "Show my reminders"
-User: "Cancel reminder #5"
+/reminder list
+/reminder cancel all
+/reminder cancel 12
+/reminder delete 12
+
+# Set reminders with natural language or ISO-like inputs
+/reminder tomorrow at 2pm to attend keynote
+/reminder in 30 minutes to grab coffee
+/reminder 2025-11-17 14:00 to check ETH Day
 ```
 
-**Database Schema**:
-```typescript
-// reminders.db3
-interface Reminder {
-  id: number;
-  inboxId: string;
-  conversationId: string;
-  targetTime: string;    // ISO format in UTC
-  message: string;
-  status: 'pending' | 'sent' | 'cancelled';
-}
+**Time Context Helper**:
+- Fetch current time in both your timezone and the event timezone via the internal tool to reduce confusion when setting reminders.
+
+**Confirmation Format** (on successful set):
+```
+✅ Reminder set!
+ID: 123
+Your time: Monday, Nov 17, 2025 at 2:00 PM (America/Los_Angeles)
+Event time: Monday, Nov 17, 2025 at 6:00 PM (America/New_York)
+Message: attend keynote
+```
+
+**List Format** (pending reminders):
+```
+Pending reminders (timezone: America/Los_Angeles):
+#5 — Your time: Mon, Nov 17 1:30 PM | Event time: Mon, Nov 17 5:30 PM — check-in
+#6 — Your time: Tue, Nov 18 9:00 AM | Event time: Tue, Nov 18 1:00 PM — builder nights
 ```
 
 ---

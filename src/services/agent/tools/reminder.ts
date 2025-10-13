@@ -1,5 +1,6 @@
 import { tool } from "@langchain/core/tools";
 import { DateTime } from "luxon";
+import { Chrono } from "chrono-node";
 import { z } from "zod";
 import { EVENT_TZ } from "@/constant.js";
 import {
@@ -8,6 +9,52 @@ import {
   insertReminder,
   listAllPendingForInbox,
 } from "@/store.js";
+
+
+export function parseReminderText(input: string, timezone: string) {
+  const text = input.trim();
+  const chrono = new Chrono();
+  const parsed = chrono.parse(text, new Date(), { forwardDate: true });
+
+  if (parsed.length > 0) {
+    const first = parsed[0];
+    const parsedDate = DateTime.fromJSDate(first.start.date(), { zone: timezone });
+
+    // Extract message by removing the parsed time expression
+    const timeText = text.substring(first.index, first.index + first.text.length);
+    const message = text.replace(timeText, "").replace(/^to\s*/i, "").trim() || "Reminder";
+
+    return { targetTime: parsedDate.toISO(), message };
+  }
+
+  // Fallback: handle "in X minutes/hours/days" manually
+  const fallback = parseSimpleRelativeTime(text, timezone);
+  if (fallback) return fallback;
+
+  return { targetTime: null, message: "" };
+}
+
+function parseSimpleRelativeTime(text: string, timezone: string) {
+  const now = DateTime.now().setZone(timezone);
+  const lower = text.toLowerCase();
+
+  let targetDateTime: DateTime | null = null;
+
+  const minutes = lower.match(/in\s+(\d+)\s+minutes?/);
+  const hours = lower.match(/in\s+(\d+)\s+hours?/);
+  const days = lower.match(/in\s+(\d+)\s+days?/);
+
+  if (minutes) targetDateTime = now.plus({ minutes: +minutes[1] });
+  else if (hours) targetDateTime = now.plus({ hours: +hours[1] });
+  else if (days) targetDateTime = now.plus({ days: +days[1] });
+
+  if (targetDateTime) {
+    const message = lower.replace(/in\s+\d+\s+(minutes?|hours?|days?)/, "").replace(/^to\s*/, "").trim() || "Reminder";
+    return { targetTime: targetDateTime.toISO(), message };
+  }
+
+  return null;
+}
 
 export const fetchCurrentDateTime = tool(
   ({ userTimezone }: { userTimezone?: string }) => {
@@ -140,17 +187,11 @@ export const setReminder = tool(
       // Parse the target time in user's timezone first
       let targetDateTime = DateTime.fromISO(targetTime, { zone: timezone });
       
-      // If ISO parsing fails, try other common formats
-      if (!targetDateTime.isValid) {
-        // Try parsing as natural language with user's timezone
-        targetDateTime = DateTime.fromFormat(targetTime, "yyyy-MM-dd HH:mm", { zone: timezone });
-      }
-      
-      if (!targetDateTime.isValid) {
-        return `Invalid date format. Please use:
-- ISO format: 2025-01-15T14:30:00
-- Simple format: 2025-01-15 14:30
-- Or describe naturally: "tomorrow at 2pm", "in 30 minutes"`;
+      if (!targetDateTime || !targetDateTime.isValid) {
+        return `Sorry, I couldn't understand the time. Please use formats like:
+      - "in 2 minutes to call mom"
+      - "tomorrow at 2pm to have lunch"
+      - "today at 3:30pm to attend meeting"`;
       }
 
       // Check if the time is in the future

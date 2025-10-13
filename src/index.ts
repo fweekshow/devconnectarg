@@ -5,6 +5,10 @@ import { AIAgent } from "./services/agent/index.js";
 import { setBroadcastClient } from "./services/agent/tools/broadcast.js";
 // Urgent message system disabled
 import { setGroupClient } from "./services/agent/tools/activityGroups.js";
+import {
+  ContentTypeReaction,
+  ReactionCodec,
+} from "@xmtp/content-type-reaction";
 import { 
   handleSidebarRequest, 
   joinSidebarGroup, 
@@ -19,6 +23,8 @@ import {
   getEncryptionKeyFromHex,
   logAgentDetails,
 } from "./services/helpers/client.js";
+import { setReminder } from "./services/agent/tools/reminder.js";
+
 import { initDb } from "./store.js";
 import {
   DEBUG_LOGS,
@@ -30,10 +36,8 @@ import {
 } from "./config.js";
 import { ActionsCodec, type ActionsContent, ContentTypeActions } from "./xmtp-inline-actions/types/ActionsContent.js";
 import { IntentCodec, ContentTypeIntent } from "./xmtp-inline-actions/types/IntentContent.js";
-import {
-  ContentTypeReaction,
-  ReactionCodec,
-} from "@xmtp/content-type-reaction";
+import { parseReminderText } from "./services/agent/tools/reminder.js";
+// setReminder and other reminder tools are dynamically imported in helper functions below
 
 if (!WALLET_KEY) {
   throw new Error("WALLET_KEY is required");
@@ -209,6 +213,36 @@ async function handleMessage(message: DecodedMessage, client: Client) {
           }
           return; // Exit early, sidebar request handled
         }
+      }
+
+      // Check for reminder commands
+      if (!isGroup && cleanContent.toLowerCase().startsWith("/reminder ")) {
+        const reminderText = cleanContent.substring(10).trim(); // Remove "/reminder " prefix
+        
+        // 1) List reminders
+        const listCommands = ["list", "list all", "show", "show all"]; // fixed stray comma
+        if (listCommands.includes(reminderText.toLowerCase())) {
+          await handleReminderList(senderInboxId, conversation);
+          return;
+        }
+        
+        // 2) Cancel all reminders
+        const cancelCommands = ["cancel", "cancel all", "delete", "delete all", "clear", "clear all"];
+        if (cancelCommands.includes(reminderText.toLowerCase())) {
+          await handleReminderCancelAll(senderInboxId, conversation);
+          return;
+        }
+        
+        // 3) Cancel specific reminder by ID
+        const cancelIdMatch = reminderText.match(/^(cancel|delete)\s+(\d+)$/i);
+        if (cancelIdMatch) {
+          await handleReminderCancelById(parseInt(cancelIdMatch[2]), conversation, senderInboxId);
+          return;
+        }
+        
+        // 4) Set a reminder (parse time + message)
+        await handleReminderSet(reminderText, senderInboxId, conversationId, conversation);
+        return;
       }
       
       // Check for broadcast commands and handle with preview
@@ -796,6 +830,67 @@ Is there anything else I can help with?`,
   }
 }
 
+// ===== Reminder helper functions =====
+async function handleReminderList(inboxId: string, conversation: any) {
+  try {
+    const { fetchAllPendingReminders } = await import("./services/agent/tools/reminder.js");
+    const result = await fetchAllPendingReminders.invoke({ inboxId });
+    await conversation.send(result);
+  } catch (error: any) {
+    await conversation.send(`Failed to list reminders: ${error.message}`);
+  }
+}
+
+async function handleReminderCancelAll(inboxId: string, conversation: any) {
+  try {
+    const { cancelAllReminders } = await import("./services/agent/tools/reminder.js");
+    const result = await cancelAllReminders.invoke({ inboxId });
+    await conversation.send(result);
+  } catch (error: any) {
+    await conversation.send(`Failed to cancel reminders: ${error.message}`);
+  }
+}
+
+async function handleReminderCancelById(reminderId: number, conversation: any, inboxIdForLog?: string) {
+  try {
+    const { cancelPendingReminder } = await import("./services/agent/tools/reminder.js");
+    const result = await cancelPendingReminder.invoke({ reminderId });
+    await conversation.send(result);
+  } catch (error: any) {
+    await conversation.send(`Failed to cancel reminder: ${error.message}`);
+  }
+}
+
+async function handleReminderSet(
+  reminderText: string,
+  inboxId: string,
+  conversationId: string,
+  conversation: any,
+) {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const { targetTime, message } = parseReminderText(reminderText, timezone);
+  if (!targetTime) {
+    await conversation.send(
+      `I couldn't understand the time. Try examples like:\n- "in 2 minutes to call mom"\n- "tomorrow at 2pm to have lunch"`,
+    );
+    return;
+  }
+
+  try {
+    const result = await setReminder.invoke({
+      inboxId,
+      conversationId,
+      targetTime,
+      message,
+      userTimezone: timezone,
+    });
+    await conversation.send(result);
+  } catch (err: any) {
+    console.error("Reminder error:", err);
+    await conversation.send(`Failed to set reminder: ${err.message}`);
+  }
+}
+
 // Railway monitoring will handle health checks automatically
 
 async function main() {
@@ -823,7 +918,7 @@ async function main() {
       dbEncryptionKey: encryptionKey,
       env: XMTP_ENV as "local" | "dev" | "production",
       dbPath,
-      codecs: [new ActionsCodec(), new IntentCodec()],
+      codecs: [new ActionsCodec(), new IntentCodec(), new ReactionCodec()],
     });
     
     // Register codecs for Quick Actions
@@ -1230,8 +1325,7 @@ Base is an Ethereum L2 built by Coinbase, incubated inside the company.
 🌐 Learn more: https://base.org 
 📱 Base App: https://base.org/apps 
 
-📣 Sponsored Opportunity:
-Selected winners from Base Batches will be featured inside Rocky @ DevConnect!
+Sponsors can have their organization's event featured in this slot.
 
 📧 Contact Mateo:
 • Base App: 0xteo.base.eth
