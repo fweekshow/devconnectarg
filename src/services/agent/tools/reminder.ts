@@ -113,7 +113,7 @@ export const fetchAllPendingReminders = tool(
     const timezone = userTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
     
     const reminderList = reminders
-      .map((r) => {
+      .map((r: any) => {
         // Parse the stored UTC time and convert to user's timezone
         const utcTime = DateTime.fromISO(r.targetTime, { zone: 'utc' });
         const userTime = utcTime.setZone(timezone);
