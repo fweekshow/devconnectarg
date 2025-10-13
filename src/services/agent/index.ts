@@ -74,8 +74,12 @@ export class AIAgent {
       const agentExecutor = new AgentExecutor({
         agent: toolCallingAgent,
         tools: DEFAULT_TOOLS,
+        maxIterations: 10,
+        verbose: true, // Enable verbose logging to debug loops
       });
 
+      console.log(`🤖 Agent starting with ${DEFAULT_TOOLS.length} tools available`);
+      
       const aiMessage = await agentExecutor.invoke({
         input: query,
         senderInboxId,
@@ -85,9 +89,11 @@ export class AIAgent {
         currentConversationId: conversationId,
       });
 
+      console.log(`✅ Agent completed successfully`);
       return aiMessage.output as string;
     } catch (e) {
       console.log(`⚠️ Unable to generate result: ${e}`);
+      console.error(`Full error:`, e);
       return DEFAULT_REPLY;
     }
   }
