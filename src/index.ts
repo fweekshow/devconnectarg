@@ -30,6 +30,10 @@ import {
 } from "./config.js";
 import { ActionsCodec, type ActionsContent, ContentTypeActions } from "./xmtp-inline-actions/types/ActionsContent.js";
 import { IntentCodec, ContentTypeIntent } from "./xmtp-inline-actions/types/IntentContent.js";
+import {
+  ContentTypeReaction,
+  ReactionCodec,
+} from "@xmtp/content-type-reaction";
 
 if (!WALLET_KEY) {
   throw new Error("WALLET_KEY is required");
@@ -177,6 +181,17 @@ async function handleMessage(message: DecodedMessage, client: Client) {
         console.warn("⚠️ Could not get sender address:", error);
       }
     }
+
+    // Send thinking reaction while processing
+    await (conversation as any).send(
+      {
+        action: "added",
+        content: "👀",
+        reference: message.id,
+        schema: "shortcode",
+      } as any,
+      ContentTypeReaction
+    );
 
     try {
       console.log(`🤖 Processing message: "${cleanContent}"`);
