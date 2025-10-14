@@ -20,6 +20,10 @@ import {
 } from "./config.js";
 import { ActionsCodec, type ActionsContent, ContentTypeActions } from "./xmtp-inline-actions/types/ActionsContent.js";
 import { IntentCodec, ContentTypeIntent } from "./xmtp-inline-actions/types/IntentContent.js";
+import {
+  ContentTypeReaction,
+  ReactionCodec,
+} from "@xmtp/content-type-reaction";
 
 console.log(`🚀 Starting DevConnect 2025 Concierge Agent (Agent SDK)`);
 
@@ -113,8 +117,8 @@ async function main() {
     // Create agent using Agent SDK
     const agent = await Agent.createFromEnv({
       env: process.env.XMTP_ENV as 'dev' | 'production' || 'production',
-      // Custom codecs for Quick Actions
-      codecs: [new ActionsCodec(), new IntentCodec()],
+      // Custom codecs for Quick Actions and Reactions
+      codecs: [new ActionsCodec(), new IntentCodec(), new ReactionCodec()],
     });
 
     console.log("🔄 Agent SDK client initialized with Quick Actions codecs");
@@ -206,6 +210,24 @@ async function main() {
           } catch (error) {
             console.warn("⚠️ Could not get sender address:", error);
           }
+        }
+
+        // Send thinking reaction while processing
+        try {
+          const reactionConversation = await ctx.client.conversations.getConversationById(conversationId);
+          if (reactionConversation) {
+            await reactionConversation.send(
+              {
+                action: "added",
+                content: "👀",
+                reference: ctx.message.id,
+                schema: "shortcode",
+              } as any,
+              ContentTypeReaction
+            );
+          }
+        } catch (reactionError) {
+          console.warn("⚠️ Could not send thinking reaction:", reactionError);
         }
 
         try {
