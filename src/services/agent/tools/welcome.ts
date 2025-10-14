@@ -33,12 +33,12 @@ export const showMenu = tool(
             imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760466568/base_s5smwn.png",
             style: "secondary"
           },
-          {
-            id: "join_eth_group",
-            label: "ETH Group",
-            imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760463829/Ethereum_Foundation_Logo_Vector_xddxiu.svg",
-            style: "secondary"
-          },
+          // {
+          //   id: "join_eth_group",
+          //   label: "ETH Group",
+          //   imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760463829/Ethereum_Foundation_Logo_Vector_xddxiu.svg",
+          //   style: "secondary"
+          // },
           {
             id: "join_xmtp_group",
             label: "XMTP Group",
