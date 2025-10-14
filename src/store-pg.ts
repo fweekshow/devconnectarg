@@ -71,15 +71,77 @@ async function createTables(): Promise<void> {
       ON reminders("targetTime") WHERE sent = FALSE
     `);
 
-    // User verification table
+    // User analytics table
     await client.query(`
       CREATE TABLE IF NOT EXISTS verified_users (
         id SERIAL PRIMARY KEY,
         "inboxId" TEXT UNIQUE NOT NULL,
         "walletAddress" TEXT,
         "verifiedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        "lastActiveAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        "lastActiveAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        
+        -- Engagement metrics
+        "totalMessages" INTEGER DEFAULT 0,
+        "quickActionClicks" INTEGER DEFAULT 0,
+        "naturalLanguageQueries" INTEGER DEFAULT 0,
+        "commandsUsed" INTEGER DEFAULT 0,
+        
+        -- Feature usage
+        "remindersCreated" INTEGER DEFAULT 0,
+        "groupsJoined" INTEGER DEFAULT 0,
+        "scheduleQueries" INTEGER DEFAULT 0,
+        "broadcastsReceived" INTEGER DEFAULT 0,
+        
+        -- Activity tracking
+        "firstSeenAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        "lastMessageAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        "sessionCount" INTEGER DEFAULT 1,
+        
+        -- User preferences
+        "preferredTimezone" TEXT,
+        "favoriteFeature" TEXT,
+        
+        -- Metadata
+        "metadata" JSONB DEFAULT '{}'::jsonb
       )
+    `);
+
+    // Groups analytics table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS groups (
+        id SERIAL PRIMARY KEY,
+        "groupId" TEXT UNIQUE NOT NULL,
+        "groupName" TEXT NOT NULL,
+        "groupType" TEXT NOT NULL, -- 'activity', 'sidebar', 'base_global', 'custom'
+        "createdBy" TEXT, -- inboxId of creator (null for pre-configured groups)
+        "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        "memberCount" INTEGER DEFAULT 0,
+        "lastActivityAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        
+        -- Group metadata
+        "description" TEXT,
+        "originalGroupId" TEXT, -- For sidebars, the group they split from
+        "isActive" BOOLEAN DEFAULT TRUE,
+        
+        -- Stats
+        "totalMessages" INTEGER DEFAULT 0,
+        "totalJoins" INTEGER DEFAULT 0,
+        "totalLeaves" INTEGER DEFAULT 0,
+        
+        -- Metadata
+        "metadata" JSONB DEFAULT '{}'::jsonb
+      )
+    `);
+
+    // Create index for group lookups
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_groups_type 
+      ON groups("groupType", "isActive")
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_groups_activity 
+      ON groups("lastActivityAt") WHERE "isActive" = TRUE
     `);
 
     console.log('✅ PostgreSQL tables created/verified');
@@ -277,5 +339,287 @@ export async function getRemindersByWalletAddress(walletAddress: string): Promis
   );
 
   return result.rows;
+}
+
+// ========== ANALYTICS TRACKING FUNCTIONS ==========
+
+export async function trackMessage(inboxId: string, messageType: 'text' | 'quick_action' | 'command' | 'ai_query'): Promise<void> {
+  if (!pool) return;
+  
+  try {
+    // Increment the appropriate counter
+    let updateField = 'totalMessages';
+    if (messageType === 'quick_action') updateField = 'quickActionClicks';
+    else if (messageType === 'command') updateField = 'commandsUsed';
+    else if (messageType === 'ai_query') updateField = 'naturalLanguageQueries';
+    
+    await pool.query(
+      `INSERT INTO verified_users ("inboxId", "${updateField}", "lastMessageAt", "totalMessages")
+       VALUES ($1, 1, CURRENT_TIMESTAMP, 1)
+       ON CONFLICT ("inboxId") 
+       DO UPDATE SET 
+         "${updateField}" = verified_users."${updateField}" + 1,
+         "totalMessages" = verified_users."totalMessages" + 1,
+         "lastMessageAt" = CURRENT_TIMESTAMP`,
+      [inboxId]
+    );
+  } catch (error) {
+    console.error('Analytics tracking error:', error);
+  }
+}
+
+export async function trackFeatureUsage(inboxId: string, feature: 'reminder' | 'group' | 'schedule' | 'broadcast'): Promise<void> {
+  if (!pool) return;
+  
+  try {
+    let updateField = '';
+    if (feature === 'reminder') updateField = 'remindersCreated';
+    else if (feature === 'group') updateField = 'groupsJoined';
+    else if (feature === 'schedule') updateField = 'scheduleQueries';
+    else if (feature === 'broadcast') updateField = 'broadcastsReceived';
+    
+    if (!updateField) return;
+    
+    await pool.query(
+      `UPDATE verified_users 
+       SET "${updateField}" = "${updateField}" + 1,
+           "lastActiveAt" = CURRENT_TIMESTAMP
+       WHERE "inboxId" = $1`,
+      [inboxId]
+    );
+  } catch (error) {
+    console.error('Feature tracking error:', error);
+  }
+}
+
+export async function setUserPreference(inboxId: string, timezone?: string, favoriteFeature?: string): Promise<void> {
+  if (!pool) return;
+  
+  try {
+    const updates: string[] = [];
+    const values: any[] = [inboxId];
+    let paramCount = 1;
+    
+    if (timezone) {
+      paramCount++;
+      updates.push(`"preferredTimezone" = $${paramCount}`);
+      values.push(timezone);
+    }
+    
+    if (favoriteFeature) {
+      paramCount++;
+      updates.push(`"favoriteFeature" = $${paramCount}`);
+      values.push(favoriteFeature);
+    }
+    
+    if (updates.length === 0) return;
+    
+    await pool.query(
+      `UPDATE verified_users SET ${updates.join(', ')} WHERE "inboxId" = $1`,
+      values
+    );
+  } catch (error) {
+    console.error('Preference update error:', error);
+  }
+}
+
+export async function getUserAnalytics(inboxId: string): Promise<any> {
+  if (!pool) throw new Error("Database pool not initialized");
+  
+  const result = await pool.query(
+    `SELECT 
+       "totalMessages", "quickActionClicks", "naturalLanguageQueries", "commandsUsed",
+       "remindersCreated", "groupsJoined", "scheduleQueries", "broadcastsReceived",
+       "sessionCount", "preferredTimezone", "favoriteFeature",
+       to_char("firstSeenAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "firstSeenAt",
+       to_char("lastMessageAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "lastMessageAt",
+       to_char("lastActiveAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "lastActiveAt"
+     FROM verified_users 
+     WHERE "inboxId" = $1`,
+    [inboxId]
+  );
+  
+  return result.rows[0] || null;
+}
+
+export async function getAnalyticsSummary(): Promise<any> {
+  if (!pool) throw new Error("Database pool not initialized");
+  
+  const result = await pool.query(`
+    SELECT 
+      COUNT(*) as "totalUsers",
+      SUM("totalMessages") as "totalMessages",
+      SUM("quickActionClicks") as "totalQuickActions",
+      SUM("naturalLanguageQueries") as "totalAIQueries",
+      SUM("remindersCreated") as "totalReminders",
+      SUM("groupsJoined") as "totalGroupJoins",
+      AVG("totalMessages") as "avgMessagesPerUser"
+    FROM verified_users
+  `);
+  
+  return result.rows[0];
+}
+
+// ========== GROUP MANAGEMENT FUNCTIONS ==========
+
+export async function registerGroup(
+  groupId: string,
+  groupName: string,
+  groupType: 'activity' | 'sidebar' | 'base_global' | 'custom',
+  createdBy?: string,
+  description?: string,
+  originalGroupId?: string
+): Promise<void> {
+  if (!pool) return;
+  
+  try {
+    await pool.query(
+      `INSERT INTO groups ("groupId", "groupName", "groupType", "createdBy", "description", "originalGroupId")
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT ("groupId") 
+       DO UPDATE SET 
+         "groupName" = $2,
+         "description" = $5,
+         "lastActivityAt" = CURRENT_TIMESTAMP`,
+      [groupId, groupName, groupType, createdBy || null, description || null, originalGroupId || null]
+    );
+  } catch (error) {
+    console.error('Group registration error:', error);
+  }
+}
+
+export async function trackGroupMemberJoin(groupId: string, memberInboxId?: string): Promise<void> {
+  if (!pool) return;
+  
+  try {
+    await pool.query(
+      `UPDATE groups 
+       SET "memberCount" = "memberCount" + 1,
+           "totalJoins" = "totalJoins" + 1,
+           "lastActivityAt" = CURRENT_TIMESTAMP
+       WHERE "groupId" = $1`,
+      [groupId]
+    );
+    
+    // Also track in user analytics if memberInboxId provided
+    if (memberInboxId) {
+      await trackFeatureUsage(memberInboxId, 'group');
+    }
+  } catch (error) {
+    console.error('Group join tracking error:', error);
+  }
+}
+
+export async function trackGroupMemberLeave(groupId: string): Promise<void> {
+  if (!pool) return;
+  
+  try {
+    await pool.query(
+      `UPDATE groups 
+       SET "memberCount" = GREATEST("memberCount" - 1, 0),
+           "totalLeaves" = "totalLeaves" + 1,
+           "lastActivityAt" = CURRENT_TIMESTAMP
+       WHERE "groupId" = $1`,
+      [groupId]
+    );
+  } catch (error) {
+    console.error('Group leave tracking error:', error);
+  }
+}
+
+export async function trackGroupMessage(groupId: string): Promise<void> {
+  if (!pool) return;
+  
+  try {
+    await pool.query(
+      `UPDATE groups 
+       SET "totalMessages" = "totalMessages" + 1,
+           "lastActivityAt" = CURRENT_TIMESTAMP
+       WHERE "groupId" = $1`,
+      [groupId]
+    );
+  } catch (error) {
+    console.error('Group message tracking error:', error);
+  }
+}
+
+export async function setGroupActive(groupId: string, isActive: boolean): Promise<void> {
+  if (!pool) return;
+  
+  try {
+    await pool.query(
+      `UPDATE groups SET "isActive" = $2 WHERE "groupId" = $1`,
+      [groupId, isActive]
+    );
+  } catch (error) {
+    console.error('Group active status error:', error);
+  }
+}
+
+export async function getGroupStats(groupId: string): Promise<any> {
+  if (!pool) throw new Error("Database pool not initialized");
+  
+  const result = await pool.query(
+    `SELECT 
+       "groupName", "groupType", "memberCount", "totalMessages", 
+       "totalJoins", "totalLeaves", "isActive", "description",
+       to_char("createdAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "createdAt",
+       to_char("lastActivityAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "lastActivityAt"
+     FROM groups 
+     WHERE "groupId" = $1`,
+    [groupId]
+  );
+  
+  return result.rows[0] || null;
+}
+
+export async function getAllGroups(groupType?: string, activeOnly: boolean = true): Promise<any[]> {
+  if (!pool) throw new Error("Database pool not initialized");
+  
+  let query = `
+    SELECT 
+      "groupId", "groupName", "groupType", "memberCount", "totalMessages",
+      "totalJoins", "isActive", "description",
+      to_char("createdAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "createdAt",
+      to_char("lastActivityAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "lastActivityAt"
+    FROM groups 
+    WHERE 1=1
+  `;
+  
+  const params: any[] = [];
+  
+  if (activeOnly) {
+    query += ` AND "isActive" = TRUE`;
+  }
+  
+  if (groupType) {
+    params.push(groupType);
+    query += ` AND "groupType" = $${params.length}`;
+  }
+  
+  query += ` ORDER BY "lastActivityAt" DESC`;
+  
+  const result = await pool.query(query, params);
+  return result.rows;
+}
+
+export async function getGroupAnalytics(): Promise<any> {
+  if (!pool) throw new Error("Database pool not initialized");
+  
+  const result = await pool.query(`
+    SELECT 
+      COUNT(*) as "totalGroups",
+      COUNT(*) FILTER (WHERE "isActive" = TRUE) as "activeGroups",
+      SUM("memberCount") as "totalMembers",
+      SUM("totalMessages") as "totalGroupMessages",
+      SUM("totalJoins") as "totalJoins",
+      AVG("memberCount") as "avgMembersPerGroup",
+      COUNT(*) FILTER (WHERE "groupType" = 'activity') as "activityGroups",
+      COUNT(*) FILTER (WHERE "groupType" = 'sidebar') as "sidebarGroups",
+      COUNT(*) FILTER (WHERE "groupType" = 'base_global') as "baseGlobalGroups"
+    FROM groups
+  `);
+  
+  return result.rows[0];
 }
 
