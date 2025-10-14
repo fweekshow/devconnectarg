@@ -130,7 +130,8 @@ export function cancelAllRemindersForInbox(inboxId: string): number {
 export function getDueReminders(): Reminder[] {
   if (!db) throw new Error("Database not initialized");
 
-  const now = DateTime.now().setZone(EVENT_TZ);
+  // Use UTC for comparison since reminders are stored in UTC
+  const now = DateTime.now().toUTC();
 
   const stmt = db.prepare(`
     SELECT * FROM reminders 
@@ -138,7 +139,9 @@ export function getDueReminders(): Reminder[] {
     ORDER BY targetTime ASC
   `);
 
-  return stmt.all(now.toISO()) as Reminder[];
+  const dueReminders = stmt.all(now.toISO()) as Reminder[];
+  
+  return dueReminders;
 }
 
 // Initialize database with volume support
