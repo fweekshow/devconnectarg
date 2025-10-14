@@ -125,6 +125,10 @@ async function main() {
     console.log(`✓ Agent Address: ${agent.address}`);
     console.log(`✓ Agent Inbox ID: ${agent.client.inboxId}`);
     
+    // Verify codecs are registered
+    console.log(`🔍 Registered codecs:`, agent.client.codecRegistry);
+    console.log(`🔍 ContentTypeActions:`, ContentTypeActions.toString());
+    
     // Initialize clients for various tools
     setBroadcastClient(agent.client);
     setGroupClient(agent.client);
@@ -163,7 +167,7 @@ async function main() {
         const messageContent = ctx.message.content as string;
         const senderInboxId = ctx.message.senderInboxId;
         const conversationId = ctx.conversation.id;
-        const isGroup = ctx.conversation.type === 'group';
+        const isGroup = ctx.isGroup(); // Use Agent SDK's isGroup() method
 
         if (DEBUG_LOGS) {
           console.log(`📥 Received message:`, {
@@ -185,7 +189,17 @@ async function main() {
 
         let cleanContent = messageContent;
 
-        // Always respond to all messages, but clean mentions from groups
+        // Check if we should respond to this message
+        // In groups: ONLY respond if mentioned
+        // In DMs: Always respond
+        if (isGroup && !isMentioned(messageContent)) {
+          if (DEBUG_LOGS) {
+            console.log("⏭️ Not mentioned in group, skipping");
+          }
+          return; // Exit early - don't process or send reactions
+        }
+
+        // Clean mentions from group messages
         if (isGroup && isMentioned(messageContent)) {
           cleanContent = removeMention(messageContent);
           if (DEBUG_LOGS) {
@@ -195,11 +209,6 @@ async function main() {
           if (DEBUG_LOGS) {
             console.log("💬 DM received, will respond");
           }
-        } else if (isGroup && !isMentioned(messageContent)) {
-          if (DEBUG_LOGS) {
-            console.log("⏭️ Not mentioned in group, skipping");
-          }
-          return;
         }
 
         // Get sender address for context
@@ -213,6 +222,7 @@ async function main() {
         }
 
         // Send thinking reaction while processing
+        // This is only reached if we're responding (mentioned in group or DM)
         try {
           const reactionConversation = await ctx.client.conversations.getConversationById(conversationId);
           if (reactionConversation) {
@@ -271,115 +281,6 @@ async function main() {
             }
             return;
           }
-          
-          // Additional broadcast command handlers...
-          // (I'll continue with the other commands in the next part)
-          
-          // Use AI to detect if this is a greeting/engagement message
-          const greetingCheckPrompt = `Is this message a greeting, casual hello, or someone starting a conversation? Examples: "hi", "hello", "hey", "yoooo", "what's up", "sup", "howdy", "good morning", "gm", "yo", "hey there", "bm", "based morning" etc. 
-
-Message: "${cleanContent}"
-
-CRITICAL: Respond with ONLY the word "YES" or ONLY the word "NO". No other text.`;
-
-          const isGreeting = (await aiAgent.run(
-            greetingCheckPrompt,
-            senderInboxId,
-            conversationId,
-            isGroup,
-            senderAddress,
-          )).trim().toUpperCase();
-
-          // If greeting or gibberish, show quick actions
-          let shouldShowQuickActions = isGreeting === "YES";
-          
-          if (!shouldShowQuickActions) {
-            const gibberishCheckPrompt = `Is this message gibberish, vague, unclear, nonsensical, or lacking clear intent? 
-
-GIBBERISH (respond YES): "asdf", "weeds", "xyz", "jfjfjf", random letters/words without meaning, "stuff", "things", "idk", single unclear words with no context.
-
-NOT GIBBERISH (respond NO): ANY question with "when", "what", "where", "how", "who", "why", ANY event/activity names, ANY specific requests.
-
-Message: "${cleanContent}"
-
-CRITICAL: Respond with ONLY the word "YES" or ONLY the word "NO". No other text.`;
-
-            const isGibberish = (await aiAgent.run(
-              gibberishCheckPrompt,
-              senderInboxId,
-              conversationId,
-              isGroup,
-              senderAddress,
-            )).trim().toUpperCase();
-            
-            shouldShowQuickActions = isGibberish === "YES";
-          }
-
-          if (shouldShowQuickActions) {
-            try {
-              const quickActionsContent: ActionsContent = {
-                id: "devconnect_welcome_actions",
-                description: "Hi! I'm the DevConnect 2025 Concierge. Here are things I can help you with:",
-                actions: [
-                  {
-                    id: "schedule",
-                    label: "📅 Schedule",
-                    style: "primary"
-                  },
-                  {
-                    id: "wifi",
-                    label: "📶 Wifi",
-                    style: "secondary"
-                  },
-                  {
-                    id: "event_logistics",
-                    label: "📋 Event Logistics",
-                    style: "secondary"
-                  },
-                  {
-                    id: "concierge_support",
-                    label: "🎫 Concierge Support", 
-                    style: "secondary"
-                  },
-                  {
-                    id: "join_groups",
-                    label: "👥 Join Groups",
-                    style: "secondary"
-                  },
-                  {
-                    id: "base_info",
-                    label: "🔵 Base",
-                    style: "secondary"
-                  },
-                  {
-                    id: "xmtp_info",
-                    label: "💬 XMTP",
-                    style: "secondary"
-                  }
-                ]
-              };
-
-              // Access the raw XMTP conversation through the client
-              const rawConversation = await ctx.client.conversations.getConversationById(conversationId);
-              if (!rawConversation) {
-                throw new Error("Could not find conversation");
-              }
-              
-              console.log("🔍 Attempting to send Quick Actions with ContentTypeActions:", ContentTypeActions.toString());
-              await rawConversation.send(quickActionsContent, ContentTypeActions);
-              console.log(`✅ Sent Quick Actions welcome message`);
-              
-              addToConversationHistory(senderInboxId, cleanContent, "Welcome message with Quick Actions sent");
-              return;
-            } catch (quickActionsError: any) {
-              console.error("❌ Error sending Quick Actions:", quickActionsError);
-              console.error("❌ Error details:", quickActionsError.message);
-              console.error("❌ Stack:", quickActionsError.stack);
-              await ctx.sendText("Hi! I'm the DevConnect 2025 Concierge. I can help you with the Schedule, Set Reminders, Event Info, Join Groups, and Sponsored Slot information. What would you like to know?");
-              addToConversationHistory(senderInboxId, cleanContent, "Welcome message sent (fallback)");
-              return;
-            }
-          }
 
           // Get conversation context for this user
           const conversationContext = getConversationContext(senderInboxId);
@@ -395,7 +296,49 @@ CRITICAL: Respond with ONLY the word "YES" or ONLY the word "NO". No other text.
           );
 
           if (response) {
-            // Check if this is a Quick Actions response
+            // Log the agent's response
+            console.log(`🤖 Agent Response: "${response}"`);
+            console.log(`🔍 Response length: ${response.length} chars`);
+            
+            // Check if AI is trying to list menu items (bad behavior - should use ShowMenu tool)
+            const hasSchedule = response.includes("Schedule");
+            const hasWifi = response.includes("Wifi");
+            const hasLogistics = response.includes("Event Logistics");
+            
+            console.log(`🔍 Menu detection - Schedule: ${hasSchedule}, Wifi: ${hasWifi}, Logistics: ${hasLogistics}`);
+            
+            const isListingMenu = hasSchedule && hasWifi && hasLogistics;
+            
+            if (isListingMenu) {
+              console.warn("⚠️ AI tried to list menu in text instead of using ShowMenu tool!");
+              console.log("🔄 Sending menu Quick Actions WITHOUT followup wrapper...");
+              
+              // Send the menu Quick Actions directly - NO "is there anything else" wrapper
+              const menuActionsContent: ActionsContent = {
+                id: "devconnect_welcome_actions",
+                description: "Here's what I can help you with:",
+                actions: [
+                  { id: "schedule", label: "📅 Schedule", style: "primary" },
+                  { id: "wifi", label: "📶 Wifi", style: "secondary" },
+                  { id: "event_logistics", label: "📋 Event Logistics", style: "secondary" },
+                  { id: "concierge_support", label: "🎫 Concierge Support", style: "secondary" },
+                  { id: "join_groups", label: "👥 Join Groups", style: "secondary" },
+                  { id: "join_base_group", label: "Base Group", imageUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAP0AAADHCAMAAADlCqUFAAAAV1BMVEX6+voAAP////r09Pptbf5+fv3////39/r7+/76+vv8/Pqjo/xSUv4GBv9xcf7V1ft4eP3Pz/uZmf3o6PpJSf6trfx1df2Dg/1mZv7Hx/xDQ/63t/yRkf1C/xJ+AAABYklEQVR4nO3dS07DMBRAUSeAY4dPKS2U3/7XSdIJQirMHBv53BW8I1se+oUYY8pT6K0pp0UeYsy59ihVynnV92lfyzGkjvUp9Itf+KG/B++7nu2SJEmSJEmSJEmSJEmSJEn/rbFwc23gH83j7d1QsPuH3Vjb+HvjY0n7uX2z/PGpOH4YDq1e/vm4gf650cOfrzbADy9d66/pG4yenp6enp6enp6enp6enp6enp6enp6enp6evrbzcvT09PT09PT09PT09PT09PT09PT09PT09PT0tZ2Xo6enp6enp6enp6enp6enp6enp6enp6enp6ev7bwcPT09PT09fQf6aQv9qVF9GF830L+1qp935fHvc6v/54dxXxp/bBe/8A8fp5tyfe5bxq97Q8quTGkaL0mSJEmSJEmSJEmSJEmSpB9NtQeo2BRy7REqlkPql59TiB3rY4gx9+nPOa76mHJ/T9+U0yL/AqM6NXFSNkZxAAAAAElFTkSuQmCC", style: "secondary" },
+                  { id: "join_xmtp_group", label: "XMTP Group", imageUrl: "https://d392zik6ho62y0.cloudfront.net/images/xmtp-logo.png", style: "secondary" }
+                ]
+              };
+              
+              const menuConversation = await ctx.client.conversations.getConversationById(conversationId);
+              if (menuConversation) {
+                await menuConversation.send(menuActionsContent, ContentTypeActions);
+                console.log(`✅ Sent Quick Actions menu directly (no followup)`);
+              }
+              
+              addToConversationHistory(senderInboxId, cleanContent, "Menu shown via Quick Actions");
+              return; // Exit early - menu sent, don't add followup
+            }
+            
+            // Check if this is a Quick Actions response from ShowMenu tool
             if (response.includes('"contentType":"coinbase.com/actions:1.0"')) {
               try {
                 const quickActionsData = JSON.parse(response);
@@ -458,13 +401,23 @@ Is there anything else I can help with?`,
       }
     });
 
-    // Handle Intent messages (Quick Action responses) - same logic as before but adapted
-    agent.on('intent', async (ctx) => {
+    // Handle Intent messages (Quick Action responses) using generic message handler
+    // Agent SDK doesn't have 'intent' event, so we check content type manually
+    agent.on('message', async (ctx) => {
+      // Only handle Intent content type
+      if (ctx.message.contentType?.typeId !== ContentTypeIntent.toString() && 
+          ctx.message.contentType?.typeId !== "coinbase.com/intent:1.0" &&
+          ctx.message.contentType?.typeId !== "intent") {
+        return; // Not an intent message, let other handlers deal with it
+      }
+      
       const intentContent = ctx.message.content as any;
       const actionId = intentContent.actionId;
       const originalActionsId = intentContent.id;
       
       console.log(`🎯 Received Quick Action intent: ${actionId}`);
+      console.log(`🎯 Intent from actions ID: ${originalActionsId}`);
+      console.log(`🎯 Message content type: ${ctx.message.contentType?.typeId}`);
       
       // Handle different action IDs (same logic as your original implementation)
       switch (actionId) {
@@ -506,7 +459,7 @@ Just ask naturally - I understand conversational requests!`;
         case "show_main_menu":
           const mainMenuActionsContent: ActionsContent = {
             id: "devconnect_welcome_actions",
-            description: "Hi! I'm the DevConnect 2025 Concierge. Here are things I can help you with:",
+            description: "Here's what I can help you with:",
             actions: [
               {
                 id: "schedule",
@@ -534,20 +487,27 @@ Just ask naturally - I understand conversational requests!`;
                 style: "secondary"
               },
               {
-                id: "base_info",
-                label: "🔵 Base",
+                id: "join_base_group",
+                label: "Base Group",
+                imageUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAP0AAADHCAMAAADlCqUFAAAAV1BMVEX6+voAAP////r09Pptbf5+fv3////39/r7+/76+vv8/Pqjo/xSUv4GBv9xcf7V1ft4eP3Pz/uZmf3o6PpJSf6trfx1df2Dg/1mZv7Hx/xDQ/63t/yRkf1C/xJ+AAABYklEQVR4nO3dS07DMBRAUSeAY4dPKS2U3/7XSdIJQirMHBv53BW8I1se+oUYY8pT6K0pp0UeYsy59ihVynnV92lfyzGkjvUp9Itf+KG/B++7nu2SJEmSJEmSJEmSJEmSJEn/rbFwc23gH83j7d1QsPuH3Vjb+HvjY0n7uX2z/PGpOH4YDq1e/vm4gf650cOfrzbADy9d66/pG4yenp6enp6enp6enp6enp6enp6enp6enp6evrbzcvT09PT09PT09PT09PT09PT09PT09PT09PT0tZ2Xo6enp6enp6enp6enp6enp6enp6enp6enp6ev7bwcPT09PT09fQf6aQv9qVF9GF830L+1qp935fHvc6v/54dxXxp/bBe/8A8fp5tyfe5bxq97Q8quTGkaL0mSJEmSJEmSJEmSJEmSpB9NtQeo2BRy7REqlkPql59TiB3rY4gx9+nPOa76mHJ/T9+U0yL/AqM6NXFSNkZxAAAAAElFTkSuQmCC",
                 style: "secondary"
               },
               {
-                id: "xmtp_info",
-                label: "💬 XMTP",
+                id: "join_xmtp_group",
+                label: "XMTP Group",
+                imageUrl: "https://d392zik6ho62y0.cloudfront.net/images/xmtp-logo.png",
                 style: "secondary"
               }
             ]
           };
+          console.log(`🎯 Sending main menu with ${mainMenuActionsContent.actions.length} actions`);
           const mainMenuConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
           if (mainMenuConversation) {
+            console.log(`🎯 Conversation found, sending Quick Actions...`);
             await mainMenuConversation.send(mainMenuActionsContent, ContentTypeActions);
+            console.log(`✅ Main menu Quick Actions sent successfully`);
+          } else {
+            console.error(`❌ Could not find conversation ${ctx.conversation.id}`);
           }
           break;
           
@@ -654,24 +614,13 @@ Is there anything else I can help with?`,
           }
           break;
 
-        case "base_info":
-          const baseMessage = `🔵 Base
-
-Base is an Ethereum L2 built by Coinbase, incubated inside the company.
-
-🌐 Learn more: https://base.org 
-📱 Base App: https://base.org/apps 
-
-📣 Sponsored Opportunity:
-Selected winners from Base Batches will be featured inside Rocky @ DevConnect!
-
-📧 Contact Mateo:
-• Base App: 0xteo.base.eth
-• Twitter: @0xTeo`;
+        case "join_base_group":
+          const { addMemberToBaseGlobalEvents } = await import("./services/agent/tools/activityGroups.js");
+          const baseGroupResult = await addMemberToBaseGlobalEvents(ctx.message.senderInboxId);
           
-          const baseFollowupActionsContent: ActionsContent = {
-            id: "base_info_followup",
-            description: `${baseMessage}
+          const baseGroupFollowupActionsContent: ActionsContent = {
+            id: "base_group_join_followup",
+            description: `${baseGroupResult}
 
 Is there anything else I can help with?`,
             actions: [
@@ -689,23 +638,17 @@ Is there anything else I can help with?`,
           };
           const baseConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
           if (baseConversation) {
-            await baseConversation.send(baseFollowupActionsContent, ContentTypeActions);
+            await baseConversation.send(baseGroupFollowupActionsContent, ContentTypeActions);
           }
           break;
 
-        case "xmtp_info":
-          const xmtpMessage = `💬 XMTP
-
-XMTP (Extensible Message Transport Protocol) is an open protocol for secure, decentralized messaging.
-
-🌐 Learn more: https://xmtp.org 
-📱 Try it: Download Converse or Base App to message on XMTP
-
-This agent runs on XMTP! All messages you send here are private and decentralized.`;
+        case "join_xmtp_group":
+          const { addMemberToXMTPGroup } = await import("./services/agent/tools/activityGroups.js");
+          const xmtpGroupResult = await addMemberToXMTPGroup(ctx.message.senderInboxId);
           
-          const xmtpFollowupActionsContent: ActionsContent = {
-            id: "xmtp_info_followup",
-            description: `${xmtpMessage}
+          const xmtpGroupFollowupActionsContent: ActionsContent = {
+            id: "xmtp_group_join_followup",
+            description: `${xmtpGroupResult}
 
 Is there anything else I can help with?`,
             actions: [
@@ -723,7 +666,7 @@ Is there anything else I can help with?`,
           };
           const xmtpConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
           if (xmtpConversation) {
-            await xmtpConversation.send(xmtpFollowupActionsContent, ContentTypeActions);
+            await xmtpConversation.send(xmtpGroupFollowupActionsContent, ContentTypeActions);
           }
           break;
 

@@ -1,13 +1,13 @@
 import { tool } from "@langchain/core/tools";
 
-export const sendWelcomeMessage = tool(
+export const showMenu = tool(
   () => {
-    // Return Quick Actions for Base App (coinbase.com/actions:1.0)
+    // Return Quick Actions menu for Base App (coinbase.com/actions:1.0)
     return JSON.stringify({
       contentType: "coinbase.com/actions:1.0",
       content: {
         id: "devconnect_welcome_actions",
-        description: "Hi! I'm the DevConnect 2025 Concierge. Here are things I can help you with:",
+        description: "Here's what I can help you with:",
         actions: [
           {
             id: "schedule",
@@ -35,13 +35,15 @@ export const sendWelcomeMessage = tool(
             style: "secondary"
           },
           {
-            id: "base_info",
-            label: "🔵 Base",
+            id: "join_base_group",
+            label: "Base Group",
+            imageUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAP0AAADHCAMAAADlCqUFAAAAV1BMVEX6+voAAP////r09Pptbf5+fv3////39/r7+/76+vv8/Pqjo/xSUv4GBv9xcf7V1ft4eP3Pz/uZmf3o6PpJSf6trfx1df2Dg/1mZv7Hx/xDQ/63t/yRkf1C/xJ+AAABYklEQVR4nO3dS07DMBRAUSeAY4dPKS2U3/7XSdIJQirMHBv53BW8I1se+oUYY8pT6K0pp0UeYsy59ihVynnV92lfyzGkjvUp9Itf+KG/B++7nu2SJEmSJEmSJEmSJEmSJEn/rbFwc23gH83j7d1QsPuH3Vjb+HvjY0n7uX2z/PGpOH4YDq1e/vm4gf650cOfrzbADy9d66/pG4yenp6enp6enp6enp6enp6enp6enp6enp6evrbzcvT09PT09PT09PT09PT09PT09PT09PT09PT0tZ2Xo6enp6enp6enp6enp6enp6enp6enp6enp6ev7bwcPT09PT09fQf6aQv9qVF9GF830L+1qp935fHvc6v/54dxXxp/bBe/8A8fp5tyfe5bxq97Q8quTGkaL0mSJEmSJEmSJEmSJEmSpB9NtQeo2BRy7REqlkPql59TiB3rY4gx9+nPOa76mHJ/T9+U0yL/AqM6NXFSNkZxAAAAAElFTkSuQmCC",
             style: "secondary"
           },
           {
-            id: "xmtp_info",
-            label: "💬 XMTP",
+            id: "join_xmtp_group",
+            label: "XMTP Group",
+            imageUrl: "https://d392zik6ho62y0.cloudfront.net/images/xmtp-logo.png",
             style: "secondary"
           }
         ]
@@ -49,8 +51,8 @@ export const sendWelcomeMessage = tool(
     });
   },
   {
-    name: "SendWelcomeMessage",
-    description: "Sends a welcome message with Quick Actions for new users to choose from (Schedule, Set Reminder, Concierge Support)",
+    name: "ShowMenu",
+    description: "CRITICAL: Shows the main menu with Quick Action buttons. Use this for: greetings (hi, hello, hey), vague messages, gibberish, casual acknowledgments (cool, thanks, okay), or when user asks what you can do. ALWAYS use this instead of listing menu options in text.",
   },
 );
 
