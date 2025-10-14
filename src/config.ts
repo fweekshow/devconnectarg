@@ -1,6 +1,6 @@
-// Environment variables
-export const WALLET_KEY = process.env.WALLET_KEY;
-export const DB_ENCRYPTION_KEY = process.env.DB_ENCRYPTION_KEY;
+// Environment variables (support both Agent SDK and legacy formats)
+export const WALLET_KEY = process.env.XMTP_WALLET_KEY || process.env.WALLET_KEY;
+export const DB_ENCRYPTION_KEY = process.env.XMTP_DB_ENCRYPTION_KEY || process.env.DB_ENCRYPTION_KEY;
 export const XMTP_ENV = process.env.XMTP_ENV;
 export const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 export const DEFAULT_MODEL = process.env.DEFAULT_MODEL;

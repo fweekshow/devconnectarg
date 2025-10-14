@@ -1016,6 +1016,7 @@ async function main() {
     
     for await (const message of stream) {
     // Skip messages from ourselves
+    console.log("🔍 Message sender inbox ID:", message?.senderInboxId);
     if (message?.senderInboxId.toLowerCase() === client.inboxId.toLowerCase()) {
       continue;
     }
