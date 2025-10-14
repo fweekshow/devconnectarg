@@ -92,4 +92,16 @@ export const getGroupAnalytics = storeModule.getGroupAnalytics || (async () => {
   throw new Error('getGroupAnalytics only available with PostgreSQL');
 });
 
+export const trackSpecificAction = storeModule.trackSpecificAction || (async () => {
+  // No-op for SQLite
+});
+
+export const getUserActionBreakdown = storeModule.getUserActionBreakdown || (async () => {
+  throw new Error('getUserActionBreakdown only available with PostgreSQL');
+});
+
+export const getPopularActions = storeModule.getPopularActions || (async () => {
+  throw new Error('getPopularActions only available with PostgreSQL');
+});
+
 export type { Reminder } from './store-sqlite.js';

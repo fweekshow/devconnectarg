@@ -343,7 +343,7 @@ export async function getRemindersByWalletAddress(walletAddress: string): Promis
 
 // ========== ANALYTICS TRACKING FUNCTIONS ==========
 
-export async function trackMessage(inboxId: string, messageType: 'text' | 'quick_action' | 'command' | 'ai_query'): Promise<void> {
+export async function trackMessage(inboxId: string, messageType: 'text' | 'quick_action' | 'command' | 'ai_query', actionName?: string): Promise<void> {
   if (!pool) return;
   
   try {
@@ -363,8 +363,44 @@ export async function trackMessage(inboxId: string, messageType: 'text' | 'quick
          "lastMessageAt" = CURRENT_TIMESTAMP`,
       [inboxId]
     );
+    
+    // Track specific action name if provided (for quick actions)
+    if (messageType === 'quick_action' && actionName) {
+      await trackSpecificAction(inboxId, actionName);
+    }
   } catch (error) {
     console.error('Analytics tracking error:', error);
+  }
+}
+
+export async function trackSpecificAction(inboxId: string, actionName: string): Promise<void> {
+  if (!pool) return;
+  
+  try {
+    // Update metadata to track specific action clicks
+    await pool.query(
+      `UPDATE verified_users 
+       SET metadata = jsonb_set(
+         jsonb_set(
+           jsonb_set(
+             COALESCE(metadata, '{}'::jsonb),
+             '{actionClicks, ${actionName}}',
+             (COALESCE(metadata->'actionClicks'->>'${actionName}', '0')::int + 1)::text::jsonb,
+             true
+           ),
+           '{lastActionClicked}',
+           to_jsonb($2::text),
+           true
+         ),
+         '{lastActionTimestamp}',
+         to_jsonb(CURRENT_TIMESTAMP::text),
+         true
+       )
+       WHERE "inboxId" = $1`,
+      [inboxId, actionName]
+    );
+  } catch (error) {
+    console.error('Specific action tracking error:', error);
   }
 }
 
@@ -433,13 +469,30 @@ export async function getUserAnalytics(inboxId: string): Promise<any> {
        "sessionCount", "preferredTimezone", "favoriteFeature",
        to_char("firstSeenAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "firstSeenAt",
        to_char("lastMessageAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "lastMessageAt",
-       to_char("lastActiveAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "lastActiveAt"
+       to_char("lastActiveAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "lastActiveAt",
+       metadata
      FROM verified_users 
      WHERE "inboxId" = $1`,
     [inboxId]
   );
   
   return result.rows[0] || null;
+}
+
+export async function getUserActionBreakdown(inboxId: string): Promise<any> {
+  if (!pool) throw new Error("Database pool not initialized");
+  
+  const result = await pool.query(
+    `SELECT 
+       metadata->'actionClicks' as "actionClicks",
+       metadata->>'lastActionClicked' as "lastActionClicked",
+       metadata->>'lastActionTimestamp' as "lastActionTimestamp"
+     FROM verified_users 
+     WHERE "inboxId" = $1`,
+    [inboxId]
+  );
+  
+  return result.rows[0] || { actionClicks: {}, lastActionClicked: null, lastActionTimestamp: null };
 }
 
 export async function getAnalyticsSummary(): Promise<any> {
@@ -458,6 +511,23 @@ export async function getAnalyticsSummary(): Promise<any> {
   `);
   
   return result.rows[0];
+}
+
+export async function getPopularActions(): Promise<any> {
+  if (!pool) throw new Error("Database pool not initialized");
+  
+  // Aggregate all action clicks across all users
+  const result = await pool.query(`
+    SELECT 
+      jsonb_object_keys(metadata->'actionClicks') as "actionName",
+      SUM((metadata->'actionClicks'->>jsonb_object_keys(metadata->'actionClicks'))::int) as "totalClicks"
+    FROM verified_users
+    WHERE metadata->'actionClicks' IS NOT NULL
+    GROUP BY jsonb_object_keys(metadata->'actionClicks')
+    ORDER BY "totalClicks" DESC
+  `);
+  
+  return result.rows;
 }
 
 // ========== GROUP MANAGEMENT FUNCTIONS ==========
