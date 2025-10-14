@@ -93,10 +93,14 @@ export async function addMemberToActivityGroup(
     // Get the group by exact ID match
     const groupId = ACTIVITY_GROUPS[activity];
     if (!groupId) {
-      return "❌ Unknown activity. Available activities: yoga, running, pickleball, hiking";
+      return "❌ Unknown activity. Available activities: yoga, running, pickleback, hiking";
     }
 
+    // Aggressive sync with retry to ensure groups are loaded
+    console.log(`🔄 Syncing conversations for ${activityName}...`);
     await groupClient.conversations.sync();
+    await new Promise(resolve => setTimeout(resolve, 500)); // Small delay for sync to complete
+    await groupClient.conversations.sync(); // Sync again to be sure
     const allConversations = await groupClient.conversations.list();
     
     // Find the group by exact ID
@@ -151,6 +155,10 @@ export async function addMemberToXMTPGroup(userInboxId: string): Promise<string>
 
     console.log(`🎯 Adding user ${userInboxId} to XMTP @ DevConnect group`);
 
+    // Aggressive sync with retry to ensure groups are loaded
+    console.log(`🔄 Syncing conversations for XMTP group...`);
+    await groupClient.conversations.sync();
+    await new Promise(resolve => setTimeout(resolve, 500));
     await groupClient.conversations.sync();
     const allConversations = await groupClient.conversations.list();
     
@@ -209,6 +217,10 @@ export async function addMemberToETHGroup(userInboxId: string): Promise<string> 
 
     console.log(`🎯 Adding user ${userInboxId} to ETH @ DevConnect group`);
 
+    // Aggressive sync with retry to ensure groups are loaded
+    console.log(`🔄 Syncing conversations for ETH group...`);
+    await groupClient.conversations.sync();
+    await new Promise(resolve => setTimeout(resolve, 500));
     await groupClient.conversations.sync();
     const allConversations = await groupClient.conversations.list();
     
@@ -267,6 +279,10 @@ export async function addMemberToBaseGlobalEvents(userInboxId: string): Promise<
 
     console.log(`🎯 Adding user ${userInboxId} to Base @ DevConnect group`);
 
+    // Aggressive sync with retry to ensure groups are loaded
+    console.log(`🔄 Syncing conversations for Base group...`);
+    await groupClient.conversations.sync();
+    await new Promise(resolve => setTimeout(resolve, 500));
     await groupClient.conversations.sync();
     const allConversations = await groupClient.conversations.list();
     
