@@ -75,7 +75,7 @@ export class AIAgent {
         agent: toolCallingAgent,
         tools: DEFAULT_TOOLS,
         maxIterations: 10,
-        verbose: true, // Enable verbose logging to debug loops
+        verbose: process.env.NODE_ENV !== 'production', // Only verbose in dev
       });
 
       console.log(`🤖 Agent starting with ${DEFAULT_TOOLS.length} tools available`);
