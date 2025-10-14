@@ -392,12 +392,12 @@ Would you like me to add you to the ${displayName} @ DevConnect group chat?`,
       {
         id: joinActionId,
         label: "✅ Yes, Add Me",
-        style: "primary"
+        style: "primary" as const
       },
       {
         id: "no_group_join",
         label: "❌ No Thanks", 
-        style: "secondary"
+        style: "secondary" as const
       }
     ]
   };
@@ -412,17 +412,17 @@ export function generateGroupSelectionQuickActions() {
       {
         id: "join_ethcon_argentina",
         label: "🇦🇷 ETHCON Argentina 2025",
-        style: "primary"
+        style: "primary" as const
       },
       {
         id: "join_staking_summit",
         label: "⛰️ Staking Summit",
-        style: "primary"
+        style: "primary" as const
       },
       {
         id: "join_builder_nights",
         label: "🔨 Builder Nights Buenos Aires",
-        style: "primary"
+        style: "primary" as const
       },
     ]
   };

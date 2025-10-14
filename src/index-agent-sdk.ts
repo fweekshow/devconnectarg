@@ -126,7 +126,7 @@ async function main() {
     console.log(`✓ Agent Inbox ID: ${agent.client.inboxId}`);
     
     // Verify codecs are registered
-    console.log(`🔍 Registered codecs:`, agent.client.codecRegistry);
+    console.log(`🔍 Registered codecs:`, (agent.client as any).codecRegistry);
     console.log(`🔍 ContentTypeActions:`, ContentTypeActions.toString());
     
     // Initialize clients for various tools
@@ -248,7 +248,7 @@ async function main() {
             const groupName = parseSidebarCommand(cleanContent);
             if (groupName) {
               console.log(`🎯 Processing sidebar group request: "${groupName}"`);
-              const sidebarResponse = await handleSidebarRequest(groupName, ctx.message, agent.client, ctx.conversation);
+              const sidebarResponse = await handleSidebarRequest(groupName, ctx.message, agent.client as any, ctx.conversation);
               if (sidebarResponse && sidebarResponse.trim() !== "") {
                 await ctx.sendText(sidebarResponse);
               }
@@ -340,7 +340,7 @@ async function main() {
               
               const menuConversation = await ctx.client.conversations.getConversationById(conversationId);
               if (menuConversation) {
-                await menuConversation.send(menuActionsContent, ContentTypeActions);
+                await (menuConversation as any).send(menuActionsContent, ContentTypeActions);
                 console.log(`✅ Sent Quick Actions menu directly (no followup)`);
               }
               
@@ -356,7 +356,7 @@ async function main() {
                 
                 const quickActionsConversation = await ctx.client.conversations.getConversationById(conversationId);
                 if (quickActionsConversation) {
-                  await quickActionsConversation.send(actionsContent);
+                  await quickActionsConversation.send(actionsContent, ContentTypeActions);
                   console.log(`✅ Sent Quick Actions response`);
                 }
                 
@@ -388,7 +388,7 @@ Is there anything else I can help with?`,
               
               const followupConversation = await ctx.client.conversations.getConversationById(conversationId);
               if (followupConversation) {
-                await followupConversation.send(followupActionsContent, ContentTypeActions);
+                await (followupConversation as any).send(followupActionsContent, ContentTypeActions);
                 console.log(`✅ Sent response with follow-up actions`);
               }
               
