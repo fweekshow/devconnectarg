@@ -11,39 +11,44 @@ export const showMenu = tool(
         actions: [
           {
             id: "schedule",
-            label: "📅 Schedule",
+            label: "Schedule",
+            imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760465562/ChatGPT_Image_Oct_14_2025_at_03_12_20_PM_p7jhdx.png",
             style: "primary"
           },
           {
             id: "wifi",
-            label: "📶 Wifi",
+            label: "Wifi",
+            imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/c_crop,w_1100,h_1100/v1760465369/vecteezy_simple-wifi-icon_8014226-1_jicvnk.jpg",
             style: "secondary"
           },
           {
             id: "event_logistics",
-            label: "📋 Event Logistics",
-            style: "secondary"
-          },
-          {
-            id: "concierge_support",
-            label: "🎫 Concierge Support", 
-            style: "secondary"
-          },
-          {
-            id: "join_groups",
-            label: "👥 Join Groups",
+            label: "Event Logistics",
+            imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464845/checklist_gd3rpo.png",
             style: "secondary"
           },
           {
             id: "join_base_group",
             label: "Base Group",
-            imageUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAP0AAADHCAMAAADlCqUFAAAAV1BMVEX6+voAAP////r09Pptbf5+fv3////39/r7+/76+vv8/Pqjo/xSUv4GBv9xcf7V1ft4eP3Pz/uZmf3o6PpJSf6trfx1df2Dg/1mZv7Hx/xDQ/63t/yRkf1C/xJ+AAABYklEQVR4nO3dS07DMBRAUSeAY4dPKS2U3/7XSdIJQirMHBv53BW8I1se+oUYY8pT6K0pp0UeYsy59ihVynnV92lfyzGkjvUp9Itf+KG/B++7nu2SJEmSJEmSJEmSJEmSJEn/rbFwc23gH83j7d1QsPuH3Vjb+HvjY0n7uX2z/PGpOH4YDq1e/vm4gf650cOfrzbADy9d66/pG4yenp6enp6enp6enp6enp6enp6enp6enp6evrbzcvT09PT09PT09PT09PT09PT09PT09PT09PT0tZ2Xo6enp6enp6enp6enp6enp6enp6enp6enp6ev7bwcPT09PT09fQf6aQv9qVF9GF830L+1qp935fHvc6v/54dxXxp/bBe/8A8fp5tyfe5bxq97Q8quTGkaL0mSJEmSJEmSJEmSJEmSpB9NtQeo2BRy7REqlkPql59TiB3rY4gx9+nPOa76mHJ/T9+U0yL/AqM6NXFSNkZxAAAAAElFTkSuQmCC",
+            imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760466568/base_s5smwn.png",
+            style: "secondary"
+          },
+          {
+            id: "join_eth_group",
+            label: "ETH Group",
+            imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760463829/Ethereum_Foundation_Logo_Vector_xddxiu.svg",
             style: "secondary"
           },
           {
             id: "join_xmtp_group",
             label: "XMTP Group",
             imageUrl: "https://d392zik6ho62y0.cloudfront.net/images/xmtp-logo.png",
+            style: "secondary"
+          },
+          {
+            id: "join_groups",
+            label: "More Groups",
+            imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464996/vecteezy_join-group-icon-in-trendy-outline-style-isolated-on-white_32201148_mkmtik.jpg",
             style: "secondary"
           }
         ]

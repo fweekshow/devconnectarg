@@ -200,6 +200,64 @@ export async function addMemberToXMTPGroup(userInboxId: string): Promise<string>
   }
 }
 
+// Special function to add user to ETH @ DevConnect group by name
+export async function addMemberToETHGroup(userInboxId: string): Promise<string> {
+  try {
+    if (!groupClient) {
+      return "❌ Group management system not initialized. Please try again later.";
+    }
+
+    console.log(`🎯 Adding user ${userInboxId} to ETH @ DevConnect group`);
+
+    await groupClient.conversations.sync();
+    const allConversations = await groupClient.conversations.list();
+    
+    // Find the group by name "ETH @ DevConnect"
+    const group = allConversations.find(conv => {
+      const details = conv as any;
+      return details.name === "ETH @ DevConnect";
+    });
+    
+    if (!group) {
+      console.log(`❌ ETH @ DevConnect group not found in agent's conversations`);
+      console.log(`🔍 Available groups:`);
+      allConversations.filter(c => c.constructor.name === 'Group').forEach(conv => {
+        const details = conv as any;
+        console.log(`  - ${conv.id}: ${details.name || 'No name'}`);
+      });
+      return `❌ Could not find ETH @ DevConnect group. The agent needs to be added to this group first. Please contact support to add the agent to the ETH @ DevConnect group.`;
+    }
+
+    console.log(`✅ Found ETH @ DevConnect group: ${group.id}`);
+    console.log(`   Name: ${(group as any).name || 'No name'}`);
+
+    // Add the member to the group using the correct XMTP method
+    try {
+      await (group as any).addMembers([userInboxId]);
+      console.log(`✅ Successfully added user to ETH @ DevConnect group`);
+    } catch (addError: any) {
+      console.log(`❌ Error for ETH @ DevConnect: ${addError.message}`);
+      
+      if (addError.message?.includes('already') || addError.message?.includes('duplicate')) {
+        console.log(`ℹ️ User was already in ETH @ DevConnect group`);
+        return `✅ You're already in the ETH @ DevConnect group! You can participate in community discussions.`;
+      } else if (addError.message?.includes('Failed to verify all installations') || addError.code === 'GenericFailure') {
+        console.log(`⚠️ Installation verification failed for ETH @ DevConnect group - user is already in group`);
+        return `✅ You're already in the ETH @ DevConnect group! You can participate in community discussions.`;
+      } else {
+        console.log(`❌ Unknown error for ETH @ DevConnect group:`, addError);
+        return `❌ Failed to add you to the ETH @ DevConnect group. Error: ${addError.message || 'Unknown error'}. Please contact support.`;
+      }
+    }
+    
+    return `✅ Great! You're now in the ETH @ DevConnect group chat. Join the conversation and connect with the Ethereum community!`;
+
+  } catch (error: any) {
+    console.error(`❌ Error adding member to ETH @ DevConnect group:`, error);
+    return `❌ Failed to add you to the ETH @ DevConnect group. Please contact support or try again later.`;
+  }
+}
+
 // Special function to add user to Base @ DevConnect group by name
 export async function addMemberToBaseGlobalEvents(userInboxId: string): Promise<string> {
   try {
