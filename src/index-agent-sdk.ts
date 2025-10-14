@@ -115,8 +115,16 @@ async function main() {
     console.log("🔄 Initializing Agent SDK client...");
     
     // Create agent using Agent SDK
+    // Use Railway volume mount for database persistence
+    const dbPath = process.env.RAILWAY_VOLUME_MOUNT_PATH 
+      ? `${process.env.RAILWAY_VOLUME_MOUNT_PATH}/devconnect-agent.db3`
+      : undefined;
+    
+    console.log(`📂 Database path: ${dbPath || 'default (.data/xmtp/)'}`);
+    
     const agent = await Agent.createFromEnv({
       env: process.env.XMTP_ENV as 'dev' | 'production' || 'production',
+      dbPath,
       // Custom codecs for Quick Actions and Reactions
       codecs: [new ActionsCodec(), new IntentCodec(), new ReactionCodec()],
     });
