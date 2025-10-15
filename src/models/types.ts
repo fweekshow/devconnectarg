@@ -22,6 +22,7 @@ export interface Schedule {
     speaker?: string;
     capacity?: number;
     status: ScheduleStatus;
+    relevance?: number;
     registration_required: boolean;
     registration_url?: string;
     tags?: string[];

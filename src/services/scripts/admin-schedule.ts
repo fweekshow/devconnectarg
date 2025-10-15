@@ -3,7 +3,7 @@
 import { DateTime } from "luxon";
 import { 
   insertSchedule, 
-  createScheduleTables,
+  createScheduleTable,
   getAllActiveSchedules,
 
 } from "../../models/scheduleModel.js";
@@ -24,7 +24,8 @@ const devConnectSchedule = [
     status: "scheduled" as ScheduleStatus,
     registrationRequired: true,
     registrationUrl: "https://devconnect.org/opening",
-    tags: ["opening", "keynote", "ceremony"]
+    tags: ["opening", "keynote", "ceremony"],
+    relevance: 10
   },
   {
     title: "Base Ecosystem Overview",
@@ -254,7 +255,7 @@ async function initializeSchedule() {
     
     // Create tables first
     console.log("Creating schedule tables...");
-    await createScheduleTables();
+    await createScheduleTable();
     
     // Check if schedule already exists
     const existingSchedules = await getAllActiveSchedules();
@@ -276,6 +277,7 @@ async function initializeSchedule() {
           schedule.speaker,
           schedule.capacity || 0,
           schedule.status || 'scheduled',
+          schedule.relevance || 0,
           schedule.registrationRequired,
           schedule.registrationUrl,
           schedule.tags

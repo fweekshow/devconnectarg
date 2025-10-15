@@ -5,7 +5,7 @@ import { Schedule, ScheduleType, ScheduleStatus } from "./types";
 export async function createScheduleTable() {
   try {
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS schedules_pg (
+      CREATE TABLE IF NOT EXISTS schedules (
         id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
         description TEXT,
@@ -16,6 +16,7 @@ export async function createScheduleTable() {
         speaker TEXT,
         capacity INTEGER,
         status TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'live', 'completed', 'cancelled')),
+        relevance INTEGER DEFAULT 0,
         registration_required BOOLEAN DEFAULT FALSE,
         registration_url TEXT,
         tags TEXT[],
@@ -41,15 +42,16 @@ export async function insertSchedule(
   speaker?: string,
   capacity?: number,
   status: ScheduleStatus = 'scheduled',
+  relevance: number = 0,
   registrationRequired: boolean = false,
   registrationUrl?: string,
   tags?: string[]
 ): Promise<number> {
   const result = await pool.query(
-    `INSERT INTO schedules_pg (title, description, start_time, end_time, location, type, speaker, capacity, status, registration_required, registration_url, tags)
-     VALUES ($1, $2, $3::timestamp, $4::timestamp, $5, $6, $7, $8, $9, $10, $11, $12)
+    `INSERT INTO schedules (title, description, start_time, end_time, location, type, speaker, capacity, status, relevance, registration_required, registration_url, tags)
+     VALUES ($1, $2, $3::timestamp, $4::timestamp, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      RETURNING id`,
-    [title, description, startTime, endTime, location || null, type, speaker || null, capacity || null, status, registrationRequired, registrationUrl || null, tags || null]
+    [title, description, startTime, endTime, location || null, type, speaker || null, capacity || null, status, relevance, registrationRequired, registrationUrl || null, tags || null]
   );
 
   return result.rows[0].id;
@@ -61,10 +63,10 @@ export async function getAllActiveSchedules(): Promise<Schedule[]> {
     `SELECT id, title, description,
             to_char(start_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS start_time,
             to_char(end_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS end_time,
-            location, type, speaker, capacity, status, registration_required, registration_url, tags,
+            location, type, speaker, capacity, status, relevance, registration_required, registration_url, tags,
             to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
             to_char(updated_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS updated_at
-     FROM schedules_pg
+     FROM schedules
      WHERE status != 'cancelled'
      ORDER BY start_time ASC`
   );
@@ -77,10 +79,10 @@ export async function getSchedulesByType(type: ScheduleType): Promise<Schedule[]
     `SELECT id, title, description,
             to_char(start_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS start_time,
             to_char(end_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS end_time,
-            location, type, speaker, capacity, status, registration_required, registration_url, tags,
+            location, type, speaker, capacity, status, relevance, registration_required, registration_url, tags,
             to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
             to_char(updated_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS updated_at
-     FROM schedules_pg
+     FROM schedules
      WHERE type = $1 AND status != 'cancelled'
      ORDER BY start_time ASC`,
     [type]
@@ -97,10 +99,10 @@ export async function getSchedulesByDate(date: string): Promise<Schedule[]> {
     `SELECT id, title, description,
             to_char(start_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS start_time,
             to_char(end_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS end_time,
-            location, type, speaker, capacity, status, registration_required, registration_url, tags,
+            location, type, speaker, capacity, status, relevance, registration_required, registration_url, tags,
             to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
             to_char(updated_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS updated_at
-     FROM schedules_pg
+     FROM schedules
      WHERE start_time >= $1::timestamp AND start_time <= $2::timestamp AND status != 'cancelled'
      ORDER BY start_time ASC`,
     [startOfDay, endOfDay]
@@ -114,10 +116,10 @@ export async function getSchedulesByDateRange(startDate: string, endDate: string
     `SELECT id, title, description,
             to_char(start_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS start_time,
             to_char(end_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS end_time,
-            location, type, speaker, capacity, status, registration_required, registration_url, tags,
+            location, type, speaker, capacity, status, relevance, registration_required, registration_url, tags,
             to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
             to_char(updated_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS updated_at
-     FROM schedules_pg
+     FROM schedules
      WHERE start_time >= $1::timestamp AND start_time <= $2::timestamp AND status != 'cancelled'
      ORDER BY start_time ASC`,
     [startDate, endDate]
@@ -134,10 +136,10 @@ export async function getUpcomingSchedules(hours: number = 24): Promise<Schedule
     `SELECT id, title, description,
             to_char(start_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS start_time,
             to_char(end_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS end_time,
-            location, type, speaker, capacity, status, registration_required, registration_url, tags,
+            location, type, speaker, capacity, status, relevance, registration_required, registration_url, tags,
             to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
             to_char(updated_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS updated_at
-     FROM schedules_pg
+     FROM schedules
      WHERE start_time >= $1::timestamp AND start_time <= $2::timestamp AND status != 'cancelled'
      ORDER BY start_time ASC`,
     [now, futureTime]
