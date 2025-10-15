@@ -16,6 +16,11 @@ export const showMenu = tool(
             style: "primary"
           },
           {
+            id: "treasure_hunt",
+            label: "🏴‍☠️ Treasure Hunt",
+            style: "primary"
+          },
+          {
             id: "wifi",
             label: "Wifi",
             imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/c_crop,w_1100,h_1100/v1760465369/vecteezy_simple-wifi-icon_8014226-1_jicvnk.jpg",
