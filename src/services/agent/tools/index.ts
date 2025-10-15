@@ -5,13 +5,12 @@ import {
 } from "./schedule.js";
 import { sendWelcomeMessage, showHelp } from "./welcome.js";
 import {
-  fetchCurrentDateTime,
   fetchAllPendingReminders,
   cancelPendingReminder,
   cancelAllReminders,
   setReminder
-} from "./reminder.js";
-
+} from "./reminder/reminder.js";
+import { fetchCurrentDateTime } from "@/services/helpers/reminderHelper.js";
 export const DEFAULT_TOOLS = [
   // Welcome and help tools
   sendWelcomeMessage,

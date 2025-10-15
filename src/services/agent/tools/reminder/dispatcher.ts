@@ -1,10 +1,5 @@
-import type { GroupUpdated } from "@xmtp/content-type-group-updated";
-import { TransactionReference } from "@xmtp/content-type-transaction-reference";
-import { WalletSendCallsParams } from "@xmtp/content-type-wallet-send-calls";
 import type { Client } from "@xmtp/node-sdk";
-import type { ActionsContent } from "./xmtp-inline-actions/types/ActionsContent.js";
-import type { IntentContent } from "./xmtp-inline-actions/types/IntentContent.js";
-import { getDueReminders, markReminderSent } from "./store.js";
+import { getDueReminders, markReminderSent } from "@/models/reminderModel.js";
 
 export interface ReminderDispatcher {
   start(
@@ -36,11 +31,11 @@ class ReminderDispatcherImpl implements ReminderDispatcher {
     if (!this.client) return;
 
     try {
-      const dueReminders = getDueReminders();
+      const dueReminders = await getDueReminders();
 
       for (const reminder of dueReminders) {
         await this.sendReminder(reminder);
-        markReminderSent(reminder.id);
+        await markReminderSent(reminder.id);
       }
     } catch (error) {
       console.error("Error processing due reminders:", error);
@@ -51,29 +46,22 @@ class ReminderDispatcherImpl implements ReminderDispatcher {
     if (!this.client) return;
 
     try {
-      // Handle legacy reminders that don't have conversationId
-      if (!reminder.conversationId || reminder.conversationId === "legacy") {
-        console.log(
-          `Skipping legacy reminder #${reminder.id} - no conversationId`,
-        );
-        return;
-      }
 
       // Send reminder only to the specific conversation where it was requested
       // This fixes the privacy issue where reminders were sent to all user conversations
       const conversation = await this.client.conversations.getConversationById(
-        reminder.conversationId,
+        reminder.conversation_id,
       );
 
       if (conversation) {
         const reminderMessage = `⏰ Reminder: ${reminder.message}`;
         await conversation.send(reminderMessage);
         console.log(
-          `Sent reminder #${reminder.id} to conversation ${reminder.conversationId}`,
+          `Sent reminder #${reminder.id} to conversation ${reminder.conversation_id}`,
         );
       } else {
         console.error(
-          `Could not find conversation ${reminder.conversationId} for reminder #${reminder.id}`,
+          `Could not find conversation ${reminder.conversation_id} for reminder #${reminder.id}`,
         );
       }
     } catch (error) {

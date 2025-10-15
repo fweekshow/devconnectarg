@@ -1,5 +1,5 @@
 import { Agent } from '@xmtp/agent-sdk';
-import { createReminderDispatcher } from "./dispatcher.js";
+import { createReminderDispatcher } from "./services/agent/tools/reminder/dispatcher.js";
 import { isMentioned, removeMention } from "./mentions.js";
 import { AIAgent } from "./services/agent/index.js";
 import { setBroadcastClient } from "./services/agent/tools/broadcast.js";
