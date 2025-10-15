@@ -13,9 +13,15 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
 });
 
-pool.connect()
-  .then(() => console.log("Connected to PostgreSQL"))
-  .catch((err: any) => console.error("PostgreSQL Connection error:", err));
-
+export async function connectDb(): Promise<void> {
+  try {
+    const client = await pool.connect();
+    client.release();
+    console.log("Connected to PostgreSQL");
+  } catch (err) {
+    console.error("PostgreSQL Connection error:", err);
+    throw err;
+  }
+}
 
 export default pool;

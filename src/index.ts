@@ -9,6 +9,7 @@ import {
   ContentTypeReaction,
   ReactionCodec,
 } from "@xmtp/content-type-reaction";
+import { incrementActionClick } from "./models/usersModel.js";
 import { 
   handleSidebarRequest, 
   joinSidebarGroup, 
@@ -24,7 +25,6 @@ import {
   logAgentDetails,
 } from "./services/helpers/client.js";
 import { cancelAllReminders, cancelPendingReminder, fetchAllPendingReminders, setReminder } from "./services/agent/tools/reminder/reminder.js";
-
 import { initDb } from "./store.js";
 import {
   DEBUG_LOGS,
@@ -39,6 +39,7 @@ import { IntentCodec, ContentTypeIntent } from "./xmtp-inline-actions/types/Inte
 import { parseReminderText } from "./services/helpers/reminderHelper.js";
 // import { createTables } from "./models/reminderModel.js"; // Using store system instead
 // setReminder and other reminder tools are dynamically imported in helper functions below
+import pool, { connectDb } from "./config/db.js";
 
 if (!WALLET_KEY) {
   throw new Error("WALLET_KEY is required")
@@ -200,7 +201,6 @@ async function handleMessage(message: DecodedMessage, client: Client) {
 
     try {
       console.log(`🤖 Processing message: "${cleanContent}"`);
-      
       // Check for sidebar group creation requests (only in groups)
       console.log(`🔍 isGroup: ${isGroup}, isSidebarRequest: ${isSidebarRequest(cleanContent)}`);
       if (isGroup && isSidebarRequest(cleanContent)) {
@@ -215,6 +215,7 @@ async function handleMessage(message: DecodedMessage, client: Client) {
           return; // Exit early, sidebar request handled
         }
       }
+      
 
       // Check for reminder commands
       if (!isGroup && cleanContent.toLowerCase().startsWith("/reminder ")) {
@@ -242,7 +243,7 @@ async function handleMessage(message: DecodedMessage, client: Client) {
         }
         
         // 4) Set a reminder (parse time + message)
-        
+        console.log("inside reminders");
         const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         const { targetTime } = parseReminderText(reminderText, timezone);
         if (!targetTime) {
@@ -845,7 +846,6 @@ async function main() {
   try {
     // Initialize database first
     console.log("🔄 Initializing database...");
-    await initDb();
     console.log("🔄 Database initialized successfully");
     
     // Get and log current date/time for agent context
@@ -1051,6 +1051,11 @@ async function main() {
       // Handle different action IDs
       switch (actionId) {
         case "schedule":
+          try {
+            await incrementActionClick(message.senderInboxId, "schedule");
+          } catch (e) {
+            console.error("⚠️ Failed to track schedule action:", e);
+          }
           // Use AI agent to provide schedule information
           try {
             // First send the schedule information with the link
@@ -1091,6 +1096,12 @@ Just ask naturally - I understand conversational requests!`;
           }
           break;
         case "wifi":
+          // Track wifi quick action
+          try {
+            await incrementActionClick(message.senderInboxId, "wifi");
+          } catch (e) {
+            console.error("⚠️ Failed to track wifi action:", e);
+          }
           const wifiActionsContent: ActionsContent = {
             id: "wifi_followup_actions",
             description: `📶 DevConnect 2025 WiFi Information
@@ -1116,6 +1127,12 @@ Is there anything else I can help with?`,
           await (conversation as any).send(wifiActionsContent, ContentTypeActions);
           break;
         case "event_logistics":
+          // Track event_logistics click
+          try {
+            await incrementActionClick(message.senderInboxId, "event_logistics");
+          } catch (e) {
+            console.error("⚠️ Failed to track event_logistics click:", e);
+          }
           await conversation.send(`📋 Event Logistics
 
 🗓️ Dates: November 13-19, 2025
@@ -1148,6 +1165,12 @@ Visit: https://devconnect.org/calendar `);
           await (conversation as any).send(logisticsFollowupActionsContent, ContentTypeActions);
           break;
         case "concierge_support":
+          // Track concierge_support quick action
+          try {
+            await incrementActionClick(message.senderInboxId, "concierge_support");
+          } catch (e) {
+            console.error("⚠️ Failed to track concierge_support action:", e);
+          }
           const conciergeActionsContent: ActionsContent = {
             id: "concierge_support_actions",
             description: `Concierge Support
@@ -1190,6 +1213,12 @@ Support contact information will be available closer to the event.`);
         */ // END BASECAMP URGENT SUPPORT
         
         case "join_groups":
+          // Track join_groups quick action
+          try {
+            await incrementActionClick(message.senderInboxId, "join_groups");
+          } catch (e) {
+            console.error("⚠️ Failed to track join_groups action:", e);
+          }
           const { generateGroupSelectionQuickActions } = await import("./services/agent/tools/activityGroups.js");
           const groupSelectionActions = generateGroupSelectionQuickActions();
           await (conversation as any).send(groupSelectionActions, ContentTypeActions);
@@ -1197,6 +1226,11 @@ Support contact information will be available closer to the event.`);
         
         // DEVCONNECT 2025 GROUP JOIN CASES
         case "join_ethcon_argentina":
+          try {
+            await incrementActionClick(message.senderInboxId, "join_groups");
+          } catch (e) {
+            console.error("⚠️ Failed to track groups_joined:", e);
+          }
           const { addMemberToActivityGroup: addEthconArg } = await import("./services/agent/tools/activityGroups.js");
           const ethconArgResult = await addEthconArg("ethcon_argentina", message.senderInboxId);
           
@@ -1222,6 +1256,11 @@ Is there anything else I can help with?`,
           break;
         
         case "join_staking_summit":
+          try {
+            await incrementActionClick(message.senderInboxId, "join_groups");
+          } catch (e) {
+            console.error("⚠️ Failed to track groups_joined:", e);
+          }
           const { addMemberToActivityGroup: addStakingSummit } = await import("./services/agent/tools/activityGroups.js");
           const stakingSummitResult = await addStakingSummit("staking_summit", message.senderInboxId);
           
@@ -1247,6 +1286,11 @@ Is there anything else I can help with?`,
           break;
         
         case "join_builder_nights":
+          try {
+            await incrementActionClick(message.senderInboxId, "join_groups");
+          } catch (e) {
+            console.error("⚠️ Failed to track groups_joined:", e);
+          }
           const { addMemberToActivityGroup: addBuilderNights } = await import("./services/agent/tools/activityGroups.js");
           const builderNightsResult = await addBuilderNights("builder_nights", message.senderInboxId);
           
@@ -1272,6 +1316,12 @@ Is there anything else I can help with?`,
           break;
         
         case "base_info":
+          // Track base_info quick action
+          try {
+            await incrementActionClick(message.senderInboxId, "base_info");
+          } catch (e) {
+            console.error("⚠️ Failed to track base_info action:", e);
+          }
           const baseMessage = `🔵 Base
 
 Base is an Ethereum L2 built by Coinbase, incubated inside the company.
@@ -1307,6 +1357,12 @@ Is there anything else I can help with?`,
           break;
         
         case "xmtp_info":
+          // Track xmtp_info quick action
+          try {
+            await incrementActionClick(message.senderInboxId, "xmtp_info");
+          } catch (e) {
+            console.error("⚠️ Failed to track xmtp_info action:", e);
+          }
           const xmtpMessage = `💬 XMTP
 
 XMTP (Extensible Message Transport Protocol) is an open protocol for secure, decentralized messaging.

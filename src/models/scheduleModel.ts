@@ -2,7 +2,7 @@ import { DateTime } from "luxon";
 import pool from "../config/db.js";
 import { Schedule, ScheduleType, ScheduleStatus } from "./types";
 
-export async function createScheduleTables() {
+export async function createScheduleTable() {
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS schedules_pg (

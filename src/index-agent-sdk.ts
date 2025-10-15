@@ -24,11 +24,19 @@ import {
   ContentTypeReaction,
   ReactionCodec,
 } from "@xmtp/content-type-reaction";
+import { connectDb } from './config/db.js';
+import { createUsersTable, incrementActionClick, incrementMessageCount } from './models/usersModel.js';
+import { createScheduleTable } from './models/scheduleModel.js';
+import { createReminderTable } from './models/reminderModel.js';
 
 console.log(`🚀 Starting DevConnect 2025 Concierge Agent (Agent SDK)`);
 
-// Initialize database for reminders
-initDb();
+// Initialize database 
+await connectDb();
+// create users tables
+await createUsersTable();
+await createScheduleTable();
+await createReminderTable();
 
 // Initialize AI agent
 const aiAgent = new AIAgent();
@@ -231,8 +239,7 @@ async function main() {
         }
 
         try {
-          console.log(`🤖 Processing message: "${cleanContent}"`);
-          
+          await incrementMessageCount(senderInboxId);
           // Check for sidebar group creation requests (only in groups)
           if (isGroup && isSidebarRequest(cleanContent)) {
             const groupName = parseSidebarCommand(cleanContent);
@@ -469,6 +476,7 @@ Is there anything else I can help with?`,
       // Handle different action IDs (same logic as your original implementation)
       switch (actionId) {
         case "schedule":
+          await incrementActionClick(ctx.message.senderInboxId, "schedule");
           const scheduleResponse = `You can view the full schedule at devconnect.org/calendar and sign up for sessions. Feel free to ask me any questions about the schedule and I'll help you craft an epic DevConnect experience.
 
 Examples:

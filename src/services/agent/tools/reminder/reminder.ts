@@ -10,6 +10,7 @@ import {
   listAllPendingForInbox,
 } from "@/models/reminderModel.js";
 import { Reminder } from "@/models/types.js";
+import { incrementRemindersCreated } from "@/models/usersModel";
 
 
 export const fetchAllPendingReminders = tool(
@@ -137,6 +138,12 @@ Current time in your timezone: ${now.toFormat("EEEE, MMMM d, yyyy 'at' h:mm a")}
 
       // Show confirmation in both user's timezone and event time
       const eventTime = targetDateTime.setZone(EVENT_TZ);
+
+      try {
+        await incrementRemindersCreated(inboxId);
+      } catch (e) {
+        console.error("reminders_created increment failed:", e);
+      }
       
       return `✅ Reminder set! 
 ID: ${reminderId}
