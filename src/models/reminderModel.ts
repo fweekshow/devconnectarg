@@ -1,6 +1,6 @@
 import { DateTime } from "luxon";
 import pool from "../config/db.js";
-import { Reminder, User } from "./types";
+import { Reminder } from "./types";
 
 export async function createTables() {
   try {

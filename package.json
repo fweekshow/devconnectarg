@@ -17,6 +17,7 @@
     "gen:keys": "npx --yes tsx src/services/scripts/generateKeys.ts",
     "lint": "eslint .",
     "revoke": "tsx --env-file .env src/services/scripts/revokeInstallations.ts",
+    "schedule": "tsx --env-file .env src/services/scripts/admin-schedule.ts",
     "start": "node dist/index.js",
     "typecheck": "tsc",
     "analytics": "node analytics.js",
