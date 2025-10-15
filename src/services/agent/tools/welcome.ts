@@ -7,7 +7,7 @@ export const showMenu = tool(
       contentType: "coinbase.com/actions:1.0",
       content: {
         id: "devconnect_welcome_actions",
-        description: "Here's what I can help you with:",
+        description: "Hi! I'm Rocky, your DevConnect 2025 Concierge. Here's what I can help you with:",
         actions: [
           {
             id: "schedule",

@@ -334,7 +334,7 @@ async function main() {
               // Send the menu Quick Actions directly - NO "is there anything else" wrapper
               const menuActionsContent: ActionsContent = {
                 id: "devconnect_welcome_actions",
-                description: "Here's what I can help you with:",
+                description: "Hi! I'm Rocky, your DevConnect 2025 Concierge. Here's what I can help you with:",
                 actions: [
                   { id: "schedule", label: "Schedule", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760465562/ChatGPT_Image_Oct_14_2025_at_03_12_20_PM_p7jhdx.png", style: "primary" },
                   { id: "wifi", label: "Wifi", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/c_crop,w_1100,h_1100/v1760465369/vecteezy_simple-wifi-icon_8014226-1_jicvnk.jpg", style: "secondary" },
