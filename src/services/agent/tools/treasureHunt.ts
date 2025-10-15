@@ -28,82 +28,82 @@ export const TREASURE_HUNT_CONFIG = {
 export const TREASURE_HUNT_TASKS = [
   {
     index: 0,
-    title: "Find Something Blue",
-    description: "Take a photo of any blue object at the DevConnect venue",
-    validationPrompt: "Analyze this image carefully. Does it clearly show a blue-colored object? The object should be distinctly blue in color. Respond with YES or NO, then explain what you see.",
-    hint: "Look around the venue - decorations, signs, attendee clothing, booth materials!",
+    title: "Find a Spoon",
+    description: "Take a photo of a spoon",
+    validationPrompt: "Does this image clearly show a spoon? Respond with YES or NO.",
+    hint: "Kitchen drawer!",
     points: 10,
   },
   {
     index: 1,
-    title: "DevConnect Swag",
-    description: "Take a photo of someone wearing DevConnect merchandise",
-    validationPrompt: "Does this image show a person wearing DevConnect branded merchandise (shirt, hat, badge, etc.)? Respond with YES or NO and describe what you see.",
-    hint: "Check out the merch booth or look for attendees with DevConnect gear!",
+    title: "Find a Fork",
+    description: "Take a photo of a fork",
+    validationPrompt: "Does this image clearly show a fork? Respond with YES or NO.",
+    hint: "Right next to the spoons!",
     points: 10,
   },
   {
     index: 2,
-    title: "Team Photo",
-    description: "Take a group selfie with all your team members",
-    validationPrompt: "Is this a group photo showing multiple people together? There should be at least 3 people visible. Respond with YES or NO and count how many people you see.",
-    hint: "Gather your team and smile! 📸",
-    points: 15,
+    title: "Find a Cup",
+    description: "Take a photo of a cup or mug",
+    validationPrompt: "Is this a photo of a cup, mug, or drinking vessel? Respond with YES or NO.",
+    hint: "Kitchen cupboard!",
+    points: 10,
   },
   {
     index: 3,
-    title: "La Rural Sign",
-    description: "Find and photograph the La Rural venue sign",
-    validationPrompt: "Does this image show a sign or text containing 'La Rural'? Respond with YES or NO and describe what text you see.",
-    hint: "Look for venue signage at the entrance or main areas",
+    title: "Find a Pen",
+    description: "Take a photo of a pen or pencil",
+    validationPrompt: "Does this image show a pen or pencil? Respond with YES or NO.",
+    hint: "Check your desk!",
     points: 10,
   },
   {
     index: 4,
-    title: "Ethereum Sticker",
-    description: "Find a laptop with an Ethereum sticker on it",
-    validationPrompt: "Does this image show a laptop with an Ethereum logo sticker visible? Look for the diamond/crystal Ethereum symbol. Respond with YES or NO and describe what you see.",
-    hint: "Developer laptops are everywhere at DevConnect!",
-    points: 15,
+    title: "Find a Book",
+    description: "Take a photo of a book",
+    validationPrompt: "Is this a photo showing a book? Respond with YES or NO.",
+    hint: "Bookshelf or nightstand!",
+    points: 10,
   },
   {
     index: 5,
-    title: "Coffee Break",
-    description: "Take a photo of your team enjoying coffee or refreshments",
-    validationPrompt: "Does this image show people with coffee, drinks, or refreshments? Respond with YES or NO and describe the beverages you see.",
-    hint: "Visit the coffee station or refreshment area!",
+    title: "Find a Shoe",
+    description: "Take a photo of a shoe",
+    validationPrompt: "Does this image show a shoe or sneaker? Respond with YES or NO.",
+    hint: "By the door!",
     points: 10,
   },
   {
     index: 6,
-    title: "Network Connection",
-    description: "Take a photo of someone you just met at DevConnect",
-    validationPrompt: "Is this a photo of a person or people at what appears to be a conference/event setting? Respond with YES or NO and describe the scene.",
-    hint: "Strike up a conversation with someone new!",
-    points: 15,
+    title: "Find a Pillow",
+    description: "Take a photo of a pillow",
+    validationPrompt: "Is this a photo of a pillow or cushion? Respond with YES or NO.",
+    hint: "Bedroom or couch!",
+    points: 10,
   },
   {
     index: 7,
-    title: "Speaker Session",
-    description: "Take a photo of a speaker presenting on stage",
-    validationPrompt: "Does this image show someone presenting or speaking on a stage with a screen or presentation visible? Respond with YES or NO and describe the scene.",
-    hint: "Attend any of the amazing talks happening throughout DevConnect!",
-    points: 15,
+    title: "Find a Towel",
+    description: "Take a photo of a towel",
+    validationPrompt: "Does this image show a towel? Respond with YES or NO.",
+    hint: "Bathroom or kitchen!",
+    points: 10,
   },
   {
     index: 8,
-    title: "Blockchain Swag",
-    description: "Find and photograph any crypto/blockchain related swag or merchandise",
-    validationPrompt: "Does this image show crypto, blockchain, or Web3 related merchandise, stickers, or promotional items? Look for logos, branding, or text related to blockchain projects. Respond with YES or NO and describe what you see.",
-    hint: "Check sponsor booths and swag tables!",
+    title: "Find a Bottle",
+    description: "Take a photo of any bottle",
+    validationPrompt: "Does this image show a bottle? Respond with YES or NO.",
+    hint: "Water bottle, shampoo, anything!",
     points: 10,
   },
   {
     index: 9,
-    title: "Victory Celebration",
-    description: "Take a celebratory team photo - you made it to the final task!",
-    validationPrompt: "Is this a photo showing people in a celebratory or happy pose? Look for smiles, raised hands, or group celebration. Respond with YES or NO and describe the mood.",
-    hint: "Celebrate with your team - you're almost done! 🎉",
+    title: "Find a Phone Charger",
+    description: "Take a photo of a phone charger",
+    validationPrompt: "Is this a photo of a phone charger or charging cable? Respond with YES or NO.",
+    hint: "Probably next to you right now! 📱",
     points: 20,
   },
 ];
@@ -176,25 +176,32 @@ export async function assignToTreasureHuntGroup(userInboxId: string): Promise<{
       await (group as any).addMembers([userInboxId]);
       console.log(`✅ Added user ${userInboxId} to treasure hunt test group`);
       
+      // TODO: Get group's current progress from database
+      // const groupProgress = await getGroupProgress(testGroupId);
+      // const currentTaskIndex = groupProgress.current_task_index;
+      const currentTaskIndex = 0; // Placeholder
+      const completedTasks = 0; // Placeholder
+      
+      const currentTask = TREASURE_HUNT_TASKS[currentTaskIndex];
+      
       // TODO: Record in database
       // await recordParticipant(userInboxId, testGroupId);
       
-      // Send the first task to the group
+      // Send the group's CURRENT task (not always task 1)
       setTimeout(async () => {
         await sendCurrentTaskToGroup(testGroupId);
-      }, 2000); // Small delay to let user see welcome message first
+      }, 2000);
+      
+      // Contextual welcome message based on progress
+      const welcomeMessage = currentTaskIndex === 0 && completedTasks === 0
+        ? "Welcome to the Base Hunt! You've been added to your team's group chat. Get ready to work together with your teammates as you dive into the adventure!"
+        : `Welcome to the Base Hunt! You've been added to your team's group chat. Your team is currently working on Task ${currentTaskIndex + 1}: ${currentTask.title}. Jump in and help them complete it!`;
       
       return {
         success: true,
         groupId: testGroupId,
         groupNumber: 1,
-        message: `🏴‍☠️ Welcome to the Treasure Hunt!
-
-You've been added to your team's group chat. 
-
-🎯 Your first challenge will appear in the group shortly. Work together with your teammates to find all ${TREASURE_HUNT_CONFIG.totalTasks} items!
-
-Good luck! 🍀`,
+        message: welcomeMessage,
       };
       
     } catch (addError: any) {
@@ -524,16 +531,14 @@ export function generateTaskSubmissionAction(groupId: string, taskIndex: number)
   
   return {
     id: `treasure_hunt_task_${taskIndex}`,
-    description: `🏴‍☠️ **Treasure Hunt - Task ${taskIndex + 1}/${TREASURE_HUNT_CONFIG.totalTasks}**
-
-🎯 ${task.title}
+    description: `🏴‍☠️ Task ${taskIndex + 1}/${TREASURE_HUNT_CONFIG.totalTasks}: ${task.title}
 
 ${task.description}
 
-📸 **How to submit:**
+📸 How to submit:
 1. Take a photo that matches the challenge
-2. Send it in this group chat
-3. Rocky will validate it automatically!
+2. Tag @devconnectarg.base.eth [image]
+3. Rocky will validate it automatically
 
 💡 Hint: ${task.hint}`,
     actions: [
@@ -599,19 +604,15 @@ export async function getTreasureHuntStatus(groupId: string): Promise<string> {
       return "❌ No active treasure hunt found.";
     }
     
-    return `🏴‍☠️ **Treasure Hunt Progress**
+    return `📊 Progress: ${completedTasks}/${TREASURE_HUNT_CONFIG.totalTasks} tasks completed
+⭐ Points: ${totalPoints}
 
-📊 Tasks Completed: ${completedTasks}/${TREASURE_HUNT_CONFIG.totalTasks}
-⭐ Total Points: ${totalPoints}
-
-🎯 **Current Challenge:**
-**${currentTask.title}**
-
+🎯 Current Task ${currentTaskIndex + 1}: ${currentTask.title}
 ${currentTask.description}
 
-📸 Send a photo in this group to submit!
+💡 Hint: ${currentTask.hint}
 
-💡 Hint: ${currentTask.hint}`;
+📸 Send a photo and tag @devconnectarg.base.eth to submit!`;
     
   } catch (error) {
     console.error("❌ Error getting treasure hunt status:", error);

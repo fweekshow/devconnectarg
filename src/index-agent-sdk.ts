@@ -49,6 +49,12 @@ interface ConversationEntry {
 
 const conversationHistory = new Map<string, ConversationEntry[]>();
 
+// Track which treasure hunt images have been validated (prevent re-validation)
+const validatedTreasureHuntImages = new Set<string>();
+
+// Store pending treasure hunt images (key: "groupId:userId")
+const pendingTreasureImages = new Map<string, { content: any; messageId: string; timestamp: number }>();
+
 // Helper functions for conversation memory
 function addToConversationHistory(senderInboxId: string, userMessage: string, botResponse: string) {
   const history = conversationHistory.get(senderInboxId) || [];
@@ -270,43 +276,42 @@ async function main() {
             const { isTreasureHuntGroup } = await import("./services/agent/tools/treasureHunt.js");
             
             if (isTreasureHuntGroup(conversationId)) {
-              console.log(`🏴‍☠️ Empty mention in treasure hunt group - checking for recent image...`);
+              console.log(`🏴‍☠️ Mention in treasure hunt group - checking Map for stored image...`);
               
-              // Get recent messages to find the image
-              const conversation = await ctx.client.conversations.getConversationById(conversationId);
-              if (conversation) {
-                await conversation.sync();
-                const messages = await (conversation as any).messages();
+              // Check the Map for the user's stored image
+              const key = `${conversationId}:${senderInboxId}`;
+              const storedImage = pendingTreasureImages.get(key);
+              
+              console.log(`🗺️ Map has ${pendingTreasureImages.size} pending images`);
+              console.log(`🔑 Looking for key: ${key}`);
+              
+              if (storedImage) {
+                const ageSeconds = (Date.now() - storedImage.timestamp) / 1000;
+                console.log(`✅ Found stored image from ${ageSeconds.toFixed(1)}s ago!`);
                 
-                // Find the most recent image message (within last 10 messages)
-                const recentMessages = messages.slice(0, 10);
-                const imageMessage = recentMessages.find((msg: any) => {
-                  const type = msg.contentType?.typeId;
-                  return type?.includes('attachment') || type?.includes('Attachment');
-                });
+                const { handleTreasureHuntImageSubmission } = await import("./services/agent/tools/treasureHunt.js");
                 
-                if (imageMessage) {
-                  console.log(`📸 Found recent image, processing treasure hunt submission...`);
-                  const { handleTreasureHuntImageSubmission } = await import("./services/agent/tools/treasureHunt.js");
-                  
-                  const response = await handleTreasureHuntImageSubmission(
-                    conversationId,
-                    senderInboxId,
-                    imageMessage.content,
-                    imageMessage.id
-                  );
-                  
-                  if (response && response.trim() !== "") {
-                    await ctx.sendText(response);
-                  }
-                  return; // Exit early, don't send menu
-                } else {
-                  console.log(`📊 No recent image found, showing task status...`);
-                  const { getTreasureHuntStatus } = await import("./services/agent/tools/treasureHunt.js");
-                  const status = await getTreasureHuntStatus(conversationId);
-                  await ctx.sendText(status);
-                  return;
+                const response = await handleTreasureHuntImageSubmission(
+                  conversationId,
+                  senderInboxId,
+                  storedImage.content,
+                  storedImage.messageId
+                );
+                
+                // Remove from Map (one-time use)
+                pendingTreasureImages.delete(key);
+                console.log(`🗑️ Removed image from Map`);
+                
+                if (response && response.trim() !== "") {
+                  await ctx.sendText(response);
                 }
+                return;
+              } else {
+                console.log(`❌ No stored image in Map - showing current task...`);
+                const { getTreasureHuntStatus } = await import("./services/agent/tools/treasureHunt.js");
+                const status = await getTreasureHuntStatus(conversationId);
+                await ctx.sendText(status);
+                return;
               }
             }
           }
@@ -394,16 +399,16 @@ async function main() {
               // Send the menu Quick Actions directly - NO "is there anything else" wrapper
               const menuActionsContent: ActionsContent = {
                 id: "devconnect_welcome_actions",
-                description: "Hi! I'm Rocky, your DevConnect 2025 Concierge. Here's what I can help you with:",
+                description: "Hi! I'm Rocky, your event buddy at DevConnect. Here's what I can help you with:",
                 actions: [
                   { id: "schedule", label: "Schedule", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760465562/ChatGPT_Image_Oct_14_2025_at_03_12_20_PM_p7jhdx.png", style: "primary" },
-                  { id: "treasure_hunt", label: "🏴‍☠️ Treasure Hunt", style: "primary" },
                   { id: "wifi", label: "Wifi", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/c_crop,w_1100,h_1100/v1760465369/vecteezy_simple-wifi-icon_8014226-1_jicvnk.jpg", style: "secondary" },
                   { id: "event_logistics", label: "Event Logistics", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464845/checklist_gd3rpo.png", style: "secondary" },
                   { id: "join_base_group", label: "Base Group", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760466568/base_s5smwn.png", style: "secondary" },
                   // { id: "join_eth_group", label: "ETH Group", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760463829/Ethereum_Foundation_Logo_Vector_xddxiu.svg", style: "secondary" },
                   { id: "join_xmtp_group", label: "XMTP Group", imageUrl: "https://d392zik6ho62y0.cloudfront.net/images/xmtp-logo.png", style: "secondary" },
-                  { id: "join_groups", label: "More Groups", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464996/vecteezy_join-group-icon-in-trendy-outline-style-isolated-on-white_32201148_mkmtik.jpg", style: "secondary" }
+                  { id: "join_groups", label: "More Groups", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464996/vecteezy_join-group-icon-in-trendy-outline-style-isolated-on-white_32201148_mkmtik.jpg", style: "secondary" },
+                  { id: "treasure_hunt", label: "Treasure Hunt", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760561042/ChatGPT_Image_Oct_15_2025_at_05_43_44_PM_wwnxiq.png", style: "secondary" }
                 ]
               };
               
@@ -516,10 +521,21 @@ Is there anything else I can help with?`,
         return; // Not a treasure hunt group
       }
       
-      // For treasure hunt submissions, we need to look at the NEXT message
-      // Base App sends image first, then text with mention separately
-      // So we'll handle this in the text message handler instead
-      console.log(`📸 Image in treasure hunt group - will process when mentioned`);
+      // Store this image in the Map for when the user mentions Rocky
+      const key = `${ctx.conversation.id}:${ctx.message.senderInboxId}`;
+      pendingTreasureImages.set(key, {
+        content: ctx.message.content,
+        messageId: ctx.message.id,
+        timestamp: Date.now()
+      });
+      console.log(`📸 Stored image for user ${ctx.message.senderInboxId.substring(0, 12)}... (waiting for mention)`);
+      
+      // Clean up old images (older than 2 minutes)
+      for (const [k, v] of pendingTreasureImages.entries()) {
+        if (Date.now() - v.timestamp > 120000) {
+          pendingTreasureImages.delete(k);
+        }
+      }
       return;
       
       // Handle the image submission
@@ -594,17 +610,12 @@ Just ask naturally - I understand conversational requests!`;
         case "show_main_menu":
           const mainMenuActionsContent: ActionsContent = {
             id: "devconnect_welcome_actions",
-            description: "Here's what I can help you with:",
+            description: "Hi! I'm Rocky, your event buddy at DevConnect. Here's what I can help you with:",
             actions: [
               {
                 id: "schedule",
                 label: "Schedule",
                 imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760465562/ChatGPT_Image_Oct_14_2025_at_03_12_20_PM_p7jhdx.png",
-                style: "primary"
-              },
-              {
-                id: "treasure_hunt",
-                label: "🏴‍☠️ Treasure Hunt",
                 style: "primary"
               },
               {
@@ -641,6 +652,12 @@ Just ask naturally - I understand conversational requests!`;
                 id: "join_groups",
                 label: "More Groups",
                 imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464996/vecteezy_join-group-icon-in-trendy-outline-style-isolated-on-white_32201148_mkmtik.jpg",
+                style: "secondary"
+              },
+              {
+                id: "treasure_hunt",
+                label: "Treasure Hunt",
+                imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760561042/ChatGPT_Image_Oct_15_2025_at_05_43_44_PM_wwnxiq.png",
                 style: "secondary"
               }
             ]
@@ -751,7 +768,16 @@ Is there anything else I can help with?`,
           break;
 
         case "treasure_hunt":
-          const { assignToTreasureHuntGroup } = await import("./services/agent/tools/treasureHunt.js");
+          const { isTreasureHuntGroup, assignToTreasureHuntGroup, sendCurrentTaskToGroup } = await import("./services/agent/tools/treasureHunt.js");
+          
+          // If clicked from within a treasure hunt group, just show current task
+          if (ctx.isGroup() && isTreasureHuntGroup(ctx.conversation.id)) {
+            console.log(`🏴‍☠️ Treasure hunt button clicked in group - showing current task`);
+            await sendCurrentTaskToGroup(ctx.conversation.id);
+            break;
+          }
+          
+          // In DM - assign to group with welcome message
           const treasureHuntResult = await assignToTreasureHuntGroup(ctx.message.senderInboxId);
           
           const treasureHuntActionsContent: ActionsContent = {
@@ -963,7 +989,7 @@ Is there anything else I can help with?`,
           break;
           
         case "treasure_hunt_rules":
-          await ctx.sendText(`🏴‍☠️ **Treasure Hunt Rules**
+          await ctx.sendText(`🏴‍☠️ Treasure Hunt Rules
 
 📋 How it works:
 1️⃣ Complete 10 photo challenges with your team
@@ -972,10 +998,7 @@ Is there anything else I can help with?`,
 4️⃣ Pass requires YES + 60%+ confidence
 5️⃣ First team to complete all tasks wins!
 
-⭐ Points per task:
-• Easy tasks: 10 points
-• Medium tasks: 15 points  
-• Hard tasks: 20 points
+⭐ Most tasks worth 10 points each
 
 🎯 Work together and have fun! 🍀`);
           break;
