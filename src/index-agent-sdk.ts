@@ -447,7 +447,8 @@ Is there anything else I can help with?`,
       // Handle different action IDs (same logic as your original implementation)
       switch (actionId) {
         case "schedule":
-          await incrementActionClick(ctx.message.senderInboxId, "schedule");
+          console.log("inside schedule");
+          await incrementActionClick(ctx.message.senderInboxId, "Schedule");
           const scheduleResponse = `You can view the full schedule at devconnect.org/calendar and sign up for sessions. Feel free to ask me any questions about the schedule and I'll help you craft an epic DevConnect experience.
 
 Examples:
@@ -543,6 +544,7 @@ Just ask naturally - I understand conversational requests!`;
           break;
           
         case "wifi":
+          await incrementActionClick(ctx.message.senderInboxId, "Wifi");
           const wifiActionsContent: ActionsContent = {
             id: "wifi_followup_actions",
             description: `📶 DevConnect 2025 WiFi Information
@@ -572,6 +574,7 @@ Is there anything else I can help with?`,
           break;
 
         case "event_logistics":
+          await incrementActionClick(ctx.message.senderInboxId, "EventLogistics");
           await ctx.sendText(`📋 Event Logistics
 
 🗓️ Dates: November 13-19, 2025
@@ -608,6 +611,7 @@ Visit: https://devconnect.org/calendar `);
           break;
 
         case "concierge_support":
+          await incrementActionClick(ctx.message.senderInboxId, "ConciergeSupport");
           const conciergeActionsContent: ActionsContent = {
             id: "concierge_support_actions",
             description: `Concierge Support
@@ -637,6 +641,7 @@ Is there anything else I can help with?`,
           break;
 
         case "join_groups":
+          await incrementActionClick(ctx.message.senderInboxId, "MoreGroups");
           const { generateGroupSelectionQuickActions } = await import("./services/agent/tools/activityGroups.js");
           const groupSelectionActions = generateGroupSelectionQuickActions();
           const groupSelectionConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
@@ -646,6 +651,7 @@ Is there anything else I can help with?`,
           break;
 
         case "join_base_group":
+          await incrementActionClick(ctx.message.senderInboxId, "BaseGroup");
           const { addMemberToBaseGlobalEvents } = await import("./services/agent/tools/activityGroups.js");
           const baseGroupResult = await addMemberToBaseGlobalEvents(ctx.message.senderInboxId);
           
@@ -702,6 +708,7 @@ Is there anything else I can help with?`,
           break;
 
         case "join_xmtp_group":
+          await incrementActionClick(ctx.message.senderInboxId, "XMTPGroup");
           const { addMemberToXMTPGroup } = await import("./services/agent/tools/activityGroups.js");
           const xmtpGroupResult = await addMemberToXMTPGroup(ctx.message.senderInboxId);
           
@@ -731,6 +738,7 @@ Is there anything else I can help with?`,
 
         // DevConnect group joining cases
         case "join_ethcon_argentina":
+          await incrementActionClick(ctx.message.senderInboxId, "EthconArgentina");
           const { addMemberToActivityGroup: addEthconArg } = await import("./services/agent/tools/activityGroups.js");
           const ethconArgResult = await addEthconArg("ethcon_argentina", ctx.message.senderInboxId);
           
@@ -759,6 +767,7 @@ Is there anything else I can help with?`,
           break;
 
         case "join_staking_summit":
+          await incrementActionClick(ctx.message.senderInboxId, "StakingSummit");
           const { addMemberToActivityGroup: addStakingSummit } = await import("./services/agent/tools/activityGroups.js");
           const stakingSummitResult = await addStakingSummit("staking_summit", ctx.message.senderInboxId);
           
@@ -787,6 +796,7 @@ Is there anything else I can help with?`,
           break;
 
         case "join_builder_nights":
+          await incrementActionClick(ctx.message.senderInboxId, "BuilderNights");
           const { addMemberToActivityGroup: addBuilderNights } = await import("./services/agent/tools/activityGroups.js");
           const builderNightsResult = await addBuilderNights("builder_nights", ctx.message.senderInboxId);
           

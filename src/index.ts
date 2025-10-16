@@ -9,7 +9,6 @@ import {
   ContentTypeReaction,
   ReactionCodec,
 } from "@xmtp/content-type-reaction";
-import { incrementActionClick } from "./models/usersModel.js";
 import { 
   handleSidebarRequest, 
   joinSidebarGroup, 
@@ -1051,11 +1050,6 @@ async function main() {
       // Handle different action IDs
       switch (actionId) {
         case "schedule":
-          try {
-            await incrementActionClick(message.senderInboxId, "schedule");
-          } catch (e) {
-            console.error("⚠️ Failed to track schedule action:", e);
-          }
           // Use AI agent to provide schedule information
           try {
             // First send the schedule information with the link
@@ -1097,11 +1091,6 @@ Just ask naturally - I understand conversational requests!`;
           break;
         case "wifi":
           // Track wifi quick action
-          try {
-            await incrementActionClick(message.senderInboxId, "wifi");
-          } catch (e) {
-            console.error("⚠️ Failed to track wifi action:", e);
-          }
           const wifiActionsContent: ActionsContent = {
             id: "wifi_followup_actions",
             description: `📶 DevConnect 2025 WiFi Information
@@ -1128,11 +1117,6 @@ Is there anything else I can help with?`,
           break;
         case "event_logistics":
           // Track event_logistics click
-          try {
-            await incrementActionClick(message.senderInboxId, "event_logistics");
-          } catch (e) {
-            console.error("⚠️ Failed to track event_logistics click:", e);
-          }
           await conversation.send(`📋 Event Logistics
 
 🗓️ Dates: November 13-19, 2025
@@ -1166,11 +1150,6 @@ Visit: https://devconnect.org/calendar `);
           break;
         case "concierge_support":
           // Track concierge_support quick action
-          try {
-            await incrementActionClick(message.senderInboxId, "concierge_support");
-          } catch (e) {
-            console.error("⚠️ Failed to track concierge_support action:", e);
-          }
           const conciergeActionsContent: ActionsContent = {
             id: "concierge_support_actions",
             description: `Concierge Support
@@ -1214,11 +1193,6 @@ Support contact information will be available closer to the event.`);
         
         case "join_groups":
           // Track join_groups quick action
-          try {
-            await incrementActionClick(message.senderInboxId, "join_groups");
-          } catch (e) {
-            console.error("⚠️ Failed to track join_groups action:", e);
-          }
           const { generateGroupSelectionQuickActions } = await import("./services/agent/tools/activityGroups.js");
           const groupSelectionActions = generateGroupSelectionQuickActions();
           await (conversation as any).send(groupSelectionActions, ContentTypeActions);
@@ -1226,11 +1200,6 @@ Support contact information will be available closer to the event.`);
         
         // DEVCONNECT 2025 GROUP JOIN CASES
         case "join_ethcon_argentina":
-          try {
-            await incrementActionClick(message.senderInboxId, "join_groups");
-          } catch (e) {
-            console.error("⚠️ Failed to track groups_joined:", e);
-          }
           const { addMemberToActivityGroup: addEthconArg } = await import("./services/agent/tools/activityGroups.js");
           const ethconArgResult = await addEthconArg("ethcon_argentina", message.senderInboxId);
           
@@ -1256,11 +1225,6 @@ Is there anything else I can help with?`,
           break;
         
         case "join_staking_summit":
-          try {
-            await incrementActionClick(message.senderInboxId, "join_groups");
-          } catch (e) {
-            console.error("⚠️ Failed to track groups_joined:", e);
-          }
           const { addMemberToActivityGroup: addStakingSummit } = await import("./services/agent/tools/activityGroups.js");
           const stakingSummitResult = await addStakingSummit("staking_summit", message.senderInboxId);
           
@@ -1286,11 +1250,6 @@ Is there anything else I can help with?`,
           break;
         
         case "join_builder_nights":
-          try {
-            await incrementActionClick(message.senderInboxId, "join_groups");
-          } catch (e) {
-            console.error("⚠️ Failed to track groups_joined:", e);
-          }
           const { addMemberToActivityGroup: addBuilderNights } = await import("./services/agent/tools/activityGroups.js");
           const builderNightsResult = await addBuilderNights("builder_nights", message.senderInboxId);
           
@@ -1317,11 +1276,6 @@ Is there anything else I can help with?`,
         
         case "base_info":
           // Track base_info quick action
-          try {
-            await incrementActionClick(message.senderInboxId, "base_info");
-          } catch (e) {
-            console.error("⚠️ Failed to track base_info action:", e);
-          }
           const baseMessage = `🔵 Base
 
 Base is an Ethereum L2 built by Coinbase, incubated inside the company.
@@ -1358,11 +1312,6 @@ Is there anything else I can help with?`,
         
         case "xmtp_info":
           // Track xmtp_info quick action
-          try {
-            await incrementActionClick(message.senderInboxId, "xmtp_info");
-          } catch (e) {
-            console.error("⚠️ Failed to track xmtp_info action:", e);
-          }
           const xmtpMessage = `💬 XMTP
 
 XMTP (Extensible Message Transport Protocol) is an open protocol for secure, decentralized messaging.
