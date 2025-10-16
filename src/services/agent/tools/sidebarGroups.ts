@@ -290,26 +290,28 @@ export async function declineSidebarGroup(
  * Also supports: ".base.eth sidebar GroupName" (after mention removal)
  */
 export function parseSidebarCommand(content: string): string | null {
+  const trimmedContent = content.trim();
+  
   // Try with @devconnectarg.base.eth prefix first (full basename)
-  let sidebarMatch = content.match(/@devconnectarg\.base\.eth sidebar (?:this (?:conversation )?)?(.+)/i);
+  let sidebarMatch = trimmedContent.match(/@devconnectarg\.base\.eth sidebar (?:this (?:conversation )?)?(.+)/i);
   if (sidebarMatch) {
     return sidebarMatch[1].trim();
   }
   
   // Try with @devconnectarg prefix (short version)
-  sidebarMatch = content.match(/@devconnectarg sidebar (?:this (?:conversation )?)?(.+)/i);
+  sidebarMatch = trimmedContent.match(/@devconnectarg sidebar (?:this (?:conversation )?)?(.+)/i);
   if (sidebarMatch) {
     return sidebarMatch[1].trim();
   }
   
   // Try with .base.eth sidebar (cleaned content after mention removal)
-  sidebarMatch = content.match(/\.base\.eth sidebar (?:this (?:conversation )?)?(.+)/i);
+  sidebarMatch = trimmedContent.match(/\.base\.eth sidebar (?:this (?:conversation )?)?(.+)/i);
   if (sidebarMatch) {
     return sidebarMatch[1].trim();
   }
   
-  // Try without any prefix (for cleaned content from groups)
-  sidebarMatch = content.match(/^sidebar (?:this (?:conversation )?)?(.+)/i);
+  // Try without any prefix (for cleaned content from groups) - more flexible with whitespace
+  sidebarMatch = trimmedContent.match(/^sidebar\s+(?:this\s+(?:conversation\s+)?)?(.+)/i);
   return sidebarMatch ? sidebarMatch[1].trim() : null;
 }
 
@@ -317,11 +319,12 @@ export function parseSidebarCommand(content: string): string | null {
  * Check if message is a sidebar creation request
  */
 export function isSidebarRequest(content: string): boolean {
-  const lowerContent = content.toLowerCase();
+  const lowerContent = content.toLowerCase().trim();
   return lowerContent.includes('@devconnectarg.base.eth sidebar') ||
          lowerContent.includes('@devconnectarg sidebar') || 
          lowerContent.includes('.base.eth sidebar') || // Handles cleaned content after mention removal
-         lowerContent.startsWith('sidebar ');
+         lowerContent.startsWith('sidebar ') ||
+         /^sidebar\s+/i.test(content.trim()); // More flexible pattern
 }
 
 /**

@@ -6,11 +6,11 @@ const DB_ENCRYPTION_KEY = process.env.XMTP_DB_ENCRYPTION_KEY || process.env.DB_E
 const XMTP_ENV = process.env.XMTP_ENV;
 
 if (!WALLET_KEY) {
-  throw new Error("WALLET_KEY is required");
+  throw new Error("WALLET_KEY or XMTP_WALLET_KEY is required");
 }
 
 if (!DB_ENCRYPTION_KEY) {
-  throw new Error("DB_ENCRYPTION_KEY is required");
+  throw new Error("DB_ENCRYPTION_KEY or XMTP_DB_ENCRYPTION_KEY is required");
 }
 
 if (!XMTP_ENV) {
@@ -20,8 +20,8 @@ if (!XMTP_ENV) {
 async function main() {
   console.log("🔄 Revoking old installations...");
   
-  const signer = createSigner(WALLET_KEY);
-  const encryptionKey = getEncryptionKeyFromHex(DB_ENCRYPTION_KEY);
+  const signer = createSigner(WALLET_KEY!);
+  const encryptionKey = getEncryptionKeyFromHex(DB_ENCRYPTION_KEY!);
   const dbPath = getDbPath("devconnect-agent");
 
   const client = await Client.create(signer, {
@@ -55,7 +55,7 @@ async function main() {
     if (oldInstallations.length > 0) {
       try {
         // Try revoking with the proper format
-        await client.revokeInstallations(oldInstallations);
+        await (client as any).revokeInstallations(oldInstallations);
         console.log(`✅ Revoked ${oldInstallations.length} old installation(s)`);
       } catch (error: any) {
         console.log(`⚠️  Direct revocation failed: ${error.message}`);

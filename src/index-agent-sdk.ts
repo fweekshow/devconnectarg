@@ -123,8 +123,16 @@ async function main() {
     console.log("🔄 Initializing Agent SDK client...");
     
     // Create agent using Agent SDK
+    // Use Railway volume mount for database persistence
+    const dbPath = process.env.RAILWAY_VOLUME_MOUNT_PATH 
+      ? `${process.env.RAILWAY_VOLUME_MOUNT_PATH}/devconnect-agent.db3`
+      : undefined;
+    
+    console.log(`📂 Database path: ${dbPath || 'default (.data/xmtp/)'}`);
+    
     const agent = await Agent.createFromEnv({
       env: process.env.XMTP_ENV as 'dev' | 'production' || 'production',
+      dbPath,
       // Custom codecs for Quick Actions and Reactions
       codecs: [new ActionsCodec(), new IntentCodec(), new ReactionCodec()],
     });
@@ -132,6 +140,10 @@ async function main() {
     console.log("🔄 Agent SDK client initialized with Quick Actions codecs");
     console.log(`✓ Agent Address: ${agent.address}`);
     console.log(`✓ Agent Inbox ID: ${agent.client.inboxId}`);
+    
+    // Verify codecs are registered
+    console.log(`🔍 Registered codecs:`, (agent.client as any).codecRegistry);
+    console.log(`🔍 ContentTypeActions:`, ContentTypeActions.toString());
     
     // Initialize clients for various tools
     setBroadcastClient(agent.client);
@@ -171,7 +183,7 @@ async function main() {
         const messageContent = ctx.message.content as string;
         const senderInboxId = ctx.message.senderInboxId;
         const conversationId = ctx.conversation.id;
-        const isGroup = ctx.conversation.type === 'group';
+        const isGroup = ctx.isGroup(); // Use Agent SDK's isGroup() method
 
         if (DEBUG_LOGS) {
           console.log(`📥 Received message:`, {
@@ -193,7 +205,17 @@ async function main() {
 
         let cleanContent = messageContent;
 
-        // Always respond to all messages, but clean mentions from groups
+        // Check if we should respond to this message
+        // In groups: ONLY respond if mentioned
+        // In DMs: Always respond
+        if (isGroup && !isMentioned(messageContent)) {
+          if (DEBUG_LOGS) {
+            console.log("⏭️ Not mentioned in group, skipping");
+          }
+          return; // Exit early - don't process or send reactions
+        }
+
+        // Clean mentions from group messages
         if (isGroup && isMentioned(messageContent)) {
           cleanContent = removeMention(messageContent);
           if (DEBUG_LOGS) {
@@ -203,11 +225,6 @@ async function main() {
           if (DEBUG_LOGS) {
             console.log("💬 DM received, will respond");
           }
-        } else if (isGroup && !isMentioned(messageContent)) {
-          if (DEBUG_LOGS) {
-            console.log("⏭️ Not mentioned in group, skipping");
-          }
-          return;
         }
 
         // Get sender address for context
@@ -221,6 +238,7 @@ async function main() {
         }
 
         // Send thinking reaction while processing
+        // This is only reached if we're responding (mentioned in group or DM)
         try {
           const reactionConversation = await ctx.client.conversations.getConversationById(conversationId);
           if (reactionConversation) {
@@ -245,7 +263,7 @@ async function main() {
             const groupName = parseSidebarCommand(cleanContent);
             if (groupName) {
               console.log(`🎯 Processing sidebar group request: "${groupName}"`);
-              const sidebarResponse = await handleSidebarRequest(groupName, ctx.message, agent.client, ctx.conversation);
+              const sidebarResponse = await handleSidebarRequest(groupName, ctx.message, agent.client as any, ctx.conversation);
               if (sidebarResponse && sidebarResponse.trim() !== "") {
                 await ctx.sendText(sidebarResponse);
               }
@@ -278,115 +296,6 @@ async function main() {
             }
             return;
           }
-          
-          // Additional broadcast command handlers...
-          // (I'll continue with the other commands in the next part)
-          
-          // Use AI to detect if this is a greeting/engagement message
-          const greetingCheckPrompt = `Is this message a greeting, casual hello, or someone starting a conversation? Examples: "hi", "hello", "hey", "yoooo", "what's up", "sup", "howdy", "good morning", "gm", "yo", "hey there", "bm", "based morning" etc. 
-
-Message: "${cleanContent}"
-
-CRITICAL: Respond with ONLY the word "YES" or ONLY the word "NO". No other text.`;
-
-          const isGreeting = (await aiAgent.run(
-            greetingCheckPrompt,
-            senderInboxId,
-            conversationId,
-            isGroup,
-            senderAddress,
-          )).trim().toUpperCase();
-
-          // If greeting or gibberish, show quick actions
-          let shouldShowQuickActions = isGreeting === "YES";
-          
-          if (!shouldShowQuickActions) {
-            const gibberishCheckPrompt = `Is this message gibberish, vague, unclear, nonsensical, or lacking clear intent? 
-
-GIBBERISH (respond YES): "asdf", "weeds", "xyz", "jfjfjf", random letters/words without meaning, "stuff", "things", "idk", single unclear words with no context.
-
-NOT GIBBERISH (respond NO): ANY question with "when", "what", "where", "how", "who", "why", ANY event/activity names, ANY specific requests.
-
-Message: "${cleanContent}"
-
-CRITICAL: Respond with ONLY the word "YES" or ONLY the word "NO". No other text.`;
-
-            const isGibberish = (await aiAgent.run(
-              gibberishCheckPrompt,
-              senderInboxId,
-              conversationId,
-              isGroup,
-              senderAddress,
-            )).trim().toUpperCase();
-            
-            shouldShowQuickActions = isGibberish === "YES";
-          }
-
-          if (shouldShowQuickActions) {
-            try {
-              const quickActionsContent: ActionsContent = {
-                id: "devconnect_welcome_actions",
-                description: "Hi! I'm the DevConnect 2025 Concierge. Here are things I can help you with:",
-                actions: [
-                  {
-                    id: "schedule",
-                    label: "📅 Schedule",
-                    style: "primary"
-                  },
-                  {
-                    id: "wifi",
-                    label: "📶 Wifi",
-                    style: "secondary"
-                  },
-                  {
-                    id: "event_logistics",
-                    label: "📋 Event Logistics",
-                    style: "secondary"
-                  },
-                  {
-                    id: "concierge_support",
-                    label: "🎫 Concierge Support", 
-                    style: "secondary"
-                  },
-                  {
-                    id: "join_groups",
-                    label: "👥 Join Groups",
-                    style: "secondary"
-                  },
-                  {
-                    id: "base_info",
-                    label: "🔵 Base",
-                    style: "secondary"
-                  },
-                  {
-                    id: "xmtp_info",
-                    label: "💬 XMTP",
-                    style: "secondary"
-                  }
-                ]
-              };
-
-              // Access the raw XMTP conversation through the client
-              const rawConversation = await ctx.client.conversations.getConversationById(conversationId);
-              if (!rawConversation) {
-                throw new Error("Could not find conversation");
-              }
-              
-              console.log("🔍 Attempting to send Quick Actions with ContentTypeActions:", ContentTypeActions.toString());
-              await rawConversation.send(quickActionsContent, ContentTypeActions);
-              console.log(`✅ Sent Quick Actions welcome message`);
-              
-              addToConversationHistory(senderInboxId, cleanContent, "Welcome message with Quick Actions sent");
-              return;
-            } catch (quickActionsError: any) {
-              console.error("❌ Error sending Quick Actions:", quickActionsError);
-              console.error("❌ Error details:", quickActionsError.message);
-              console.error("❌ Stack:", quickActionsError.stack);
-              await ctx.sendText("Hi! I'm the DevConnect 2025 Concierge. I can help you with the Schedule, Set Reminders, Event Info, Join Groups, and Sponsored Slot information. What would you like to know?");
-              addToConversationHistory(senderInboxId, cleanContent, "Welcome message sent (fallback)");
-              return;
-            }
-          }
 
           // Get conversation context for this user
           const conversationContext = getConversationContext(senderInboxId);
@@ -402,7 +311,59 @@ CRITICAL: Respond with ONLY the word "YES" or ONLY the word "NO". No other text.
           );
 
           if (response) {
-            // Check if this is a Quick Actions response
+            // Log the agent's response
+            console.log(`🤖 Agent Response: "${response}"`);
+            console.log(`🔍 Response length: ${response.length} chars`);
+            
+            // Check if AI is responding to a greeting or giving a generic "how can I help" response
+            const lowerResponse = response.toLowerCase();
+            const hasSchedule = response.includes("Schedule");
+            const hasWifi = response.includes("Wifi");
+            const hasLogistics = response.includes("Event Logistics");
+            
+            // Detect generic greeting responses that should use ShowMenu tool instead
+            const isGenericGreeting = (
+              (lowerResponse.includes("how can i assist") || 
+               lowerResponse.includes("how can i help") ||
+               lowerResponse.includes("what can i help") ||
+               lowerResponse.includes("let me know")) &&
+              response.length < 250 // Short generic response
+            );
+            
+            console.log(`🔍 Menu detection - Schedule: ${hasSchedule}, Wifi: ${hasWifi}, Logistics: ${hasLogistics}, GenericGreeting: ${isGenericGreeting}`);
+            
+            const isListingMenu = (hasSchedule && hasWifi && hasLogistics) || isGenericGreeting;
+            
+            if (isListingMenu) {
+              console.warn("⚠️ AI tried to list menu in text instead of using ShowMenu tool!");
+              console.log("🔄 Sending menu Quick Actions WITHOUT followup wrapper...");
+              
+              // Send the menu Quick Actions directly - NO "is there anything else" wrapper
+              const menuActionsContent: ActionsContent = {
+                id: "devconnect_welcome_actions",
+                description: "Hi! I'm Rocky, your DevConnect 2025 Concierge. Here's what I can help you with:",
+                actions: [
+                  { id: "schedule", label: "Schedule", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760465562/ChatGPT_Image_Oct_14_2025_at_03_12_20_PM_p7jhdx.png", style: "primary" },
+                  { id: "wifi", label: "Wifi", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/c_crop,w_1100,h_1100/v1760465369/vecteezy_simple-wifi-icon_8014226-1_jicvnk.jpg", style: "secondary" },
+                  { id: "event_logistics", label: "Event Logistics", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464845/checklist_gd3rpo.png", style: "secondary" },
+                  { id: "join_base_group", label: "Base Group", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760466568/base_s5smwn.png", style: "secondary" },
+                  // { id: "join_eth_group", label: "ETH Group", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760463829/Ethereum_Foundation_Logo_Vector_xddxiu.svg", style: "secondary" },
+                  { id: "join_xmtp_group", label: "XMTP Group", imageUrl: "https://d392zik6ho62y0.cloudfront.net/images/xmtp-logo.png", style: "secondary" },
+                  { id: "join_groups", label: "More Groups", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464996/vecteezy_join-group-icon-in-trendy-outline-style-isolated-on-white_32201148_mkmtik.jpg", style: "secondary" }
+                ]
+              };
+              
+              const menuConversation = await ctx.client.conversations.getConversationById(conversationId);
+              if (menuConversation) {
+                await (menuConversation as any).send(menuActionsContent, ContentTypeActions);
+                console.log(`✅ Sent Quick Actions menu directly (no followup)`);
+              }
+              
+              addToConversationHistory(senderInboxId, cleanContent, "Menu shown via Quick Actions");
+              return; // Exit early - menu sent, don't add followup
+            }
+            
+            // Check if this is a Quick Actions response from ShowMenu tool
             if (response.includes('"contentType":"coinbase.com/actions:1.0"')) {
               try {
                 const quickActionsData = JSON.parse(response);
@@ -410,7 +371,7 @@ CRITICAL: Respond with ONLY the word "YES" or ONLY the word "NO". No other text.
                 
                 const quickActionsConversation = await ctx.client.conversations.getConversationById(conversationId);
                 if (quickActionsConversation) {
-                  await quickActionsConversation.send(actionsContent);
+                  await quickActionsConversation.send(actionsContent, ContentTypeActions);
                   console.log(`✅ Sent Quick Actions response`);
                 }
                 
@@ -442,7 +403,7 @@ Is there anything else I can help with?`,
               
               const followupConversation = await ctx.client.conversations.getConversationById(conversationId);
               if (followupConversation) {
-                await followupConversation.send(followupActionsContent, ContentTypeActions);
+                await (followupConversation as any).send(followupActionsContent, ContentTypeActions);
                 console.log(`✅ Sent response with follow-up actions`);
               }
               
@@ -465,13 +426,23 @@ Is there anything else I can help with?`,
       }
     });
 
-    // Handle Intent messages (Quick Action responses) - same logic as before but adapted
-    agent.on('intent', async (ctx) => {
+    // Handle Intent messages (Quick Action responses) using generic message handler
+    // Agent SDK doesn't have 'intent' event, so we check content type manually
+    agent.on('message', async (ctx) => {
+      // Only handle Intent content type
+      if (ctx.message.contentType?.typeId !== ContentTypeIntent.toString() && 
+          ctx.message.contentType?.typeId !== "coinbase.com/intent:1.0" &&
+          ctx.message.contentType?.typeId !== "intent") {
+        return; // Not an intent message, let other handlers deal with it
+      }
+      
       const intentContent = ctx.message.content as any;
       const actionId = intentContent.actionId;
       const originalActionsId = intentContent.id;
       
       console.log(`🎯 Received Quick Action intent: ${actionId}`);
+      console.log(`🎯 Intent from actions ID: ${originalActionsId}`);
+      console.log(`🎯 Message content type: ${ctx.message.contentType?.typeId}`);
       
       // Handle different action IDs (same logic as your original implementation)
       switch (actionId) {
@@ -514,48 +485,60 @@ Just ask naturally - I understand conversational requests!`;
         case "show_main_menu":
           const mainMenuActionsContent: ActionsContent = {
             id: "devconnect_welcome_actions",
-            description: "Hi! I'm the DevConnect 2025 Concierge. Here are things I can help you with:",
+            description: "Here's what I can help you with:",
             actions: [
               {
                 id: "schedule",
-                label: "📅 Schedule",
+                label: "Schedule",
+                imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760465562/ChatGPT_Image_Oct_14_2025_at_03_12_20_PM_p7jhdx.png",
                 style: "primary"
               },
               {
                 id: "wifi",
-                label: "📶 Wifi",
+                label: "Wifi",
+                imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760465369/vecteezy_simple-wifi-icon_8014226-1_jicvnk.jpg",
                 style: "secondary"
               },
               {
                 id: "event_logistics",
-                label: "📋 Event Logistics",
+                label: "Event Logistics",
+                imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464845/checklist_gd3rpo.png",
                 style: "secondary"
               },
               {
-                id: "concierge_support",
-                label: "🎫 Concierge Support",
+                id: "join_base_group",
+                label: "Base Group",
+                imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760466568/base_s5smwn.png",
+                style: "secondary"
+              },
+              // {
+              //   id: "join_eth_group",
+              //   label: "ETH Group",
+              //   imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760463829/Ethereum_Foundation_Logo_Vector_xddxiu.svg",
+              //   style: "secondary"
+              // },
+              {
+                id: "join_xmtp_group",
+                label: "XMTP Group",
+                imageUrl: "https://d392zik6ho62y0.cloudfront.net/images/xmtp-logo.png",
                 style: "secondary"
               },
               {
                 id: "join_groups",
-                label: "👥 Join Groups",
-                style: "secondary"
-              },
-              {
-                id: "base_info",
-                label: "🔵 Base",
-                style: "secondary"
-              },
-              {
-                id: "xmtp_info",
-                label: "💬 XMTP",
+                label: "More Groups",
+                imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464996/vecteezy_join-group-icon-in-trendy-outline-style-isolated-on-white_32201148_mkmtik.jpg",
                 style: "secondary"
               }
             ]
           };
+          console.log(`🎯 Sending main menu with ${mainMenuActionsContent.actions.length} actions`);
           const mainMenuConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
           if (mainMenuConversation) {
+            console.log(`🎯 Conversation found, sending Quick Actions...`);
             await mainMenuConversation.send(mainMenuActionsContent, ContentTypeActions);
+            console.log(`✅ Main menu Quick Actions sent successfully`);
+          } else {
+            console.error(`❌ Could not find conversation ${ctx.conversation.id}`);
           }
           break;
           
@@ -662,24 +645,13 @@ Is there anything else I can help with?`,
           }
           break;
 
-        case "base_info":
-          const baseMessage = `🔵 Base
-
-Base is an Ethereum L2 built by Coinbase, incubated inside the company.
-
-🌐 Learn more: https://base.org 
-📱 Base App: https://base.org/apps 
-
-📣 Sponsored Opportunity:
-Selected winners from Base Batches will be featured inside Rocky @ DevConnect!
-
-📧 Contact Mateo:
-• Base App: 0xteo.base.eth
-• Twitter: @0xTeo`;
+        case "join_base_group":
+          const { addMemberToBaseGlobalEvents } = await import("./services/agent/tools/activityGroups.js");
+          const baseGroupResult = await addMemberToBaseGlobalEvents(ctx.message.senderInboxId);
           
-          const baseFollowupActionsContent: ActionsContent = {
-            id: "base_info_followup",
-            description: `${baseMessage}
+          const baseGroupFollowupActionsContent: ActionsContent = {
+            id: "base_group_join_followup",
+            description: `${baseGroupResult}
 
 Is there anything else I can help with?`,
             actions: [
@@ -697,23 +669,45 @@ Is there anything else I can help with?`,
           };
           const baseConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
           if (baseConversation) {
-            await baseConversation.send(baseFollowupActionsContent, ContentTypeActions);
+            await baseConversation.send(baseGroupFollowupActionsContent, ContentTypeActions);
           }
           break;
 
-        case "xmtp_info":
-          const xmtpMessage = `💬 XMTP
-
-XMTP (Extensible Message Transport Protocol) is an open protocol for secure, decentralized messaging.
-
-🌐 Learn more: https://xmtp.org 
-📱 Try it: Download Converse or Base App to message on XMTP
-
-This agent runs on XMTP! All messages you send here are private and decentralized.`;
+        case "join_eth_group":
+          const { addMemberToETHGroup } = await import("./services/agent/tools/activityGroups.js");
+          const ethGroupResult = await addMemberToETHGroup(ctx.message.senderInboxId);
           
-          const xmtpFollowupActionsContent: ActionsContent = {
-            id: "xmtp_info_followup",
-            description: `${xmtpMessage}
+          const ethGroupFollowupActionsContent: ActionsContent = {
+            id: "eth_group_join_followup",
+            description: `${ethGroupResult}
+
+Is there anything else I can help with?`,
+            actions: [
+              {
+                id: "show_main_menu",
+                label: "✅ Yes",
+                style: "primary"
+              },
+              {
+                id: "end_conversation",
+                label: "❌ No",
+                style: "secondary"
+              }
+            ]
+          };
+          const ethConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
+          if (ethConversation) {
+            await ethConversation.send(ethGroupFollowupActionsContent, ContentTypeActions);
+          }
+          break;
+
+        case "join_xmtp_group":
+          const { addMemberToXMTPGroup } = await import("./services/agent/tools/activityGroups.js");
+          const xmtpGroupResult = await addMemberToXMTPGroup(ctx.message.senderInboxId);
+          
+          const xmtpGroupFollowupActionsContent: ActionsContent = {
+            id: "xmtp_group_join_followup",
+            description: `${xmtpGroupResult}
 
 Is there anything else I can help with?`,
             actions: [
@@ -731,7 +725,7 @@ Is there anything else I can help with?`,
           };
           const xmtpConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
           if (xmtpConversation) {
-            await xmtpConversation.send(xmtpFollowupActionsContent, ContentTypeActions);
+            await xmtpConversation.send(xmtpGroupFollowupActionsContent, ContentTypeActions);
           }
           break;
 

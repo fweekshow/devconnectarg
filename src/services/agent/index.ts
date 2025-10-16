@@ -75,10 +75,8 @@ export class AIAgent {
         agent: toolCallingAgent,
         tools: DEFAULT_TOOLS,
         maxIterations: 10,
-        verbose: process.env.NODE_ENV !== 'production', // Only verbose in dev
+        verbose: false, // Disabled - too noisy
       });
-
-      console.log(`🤖 Agent starting with ${DEFAULT_TOOLS.length} tools available`);
       
       const aiMessage = await agentExecutor.invoke({
         input: query,

@@ -3,7 +3,7 @@ import {
   getFullSchedule,
   getSpeakerInfo
 } from "./schedule.js";
-import { sendWelcomeMessage, showHelp } from "./welcome.js";
+import { showMenu, showHelp } from "./welcome.js";
 import {
   fetchAllPendingReminders,
   cancelPendingReminder,
@@ -12,8 +12,8 @@ import {
 } from "./reminder/reminder.js";
 import { fetchCurrentDateTime } from "@/services/helpers/reminderHelper.js";
 export const DEFAULT_TOOLS = [
-  // Welcome and help tools
-  sendWelcomeMessage,
+  // Menu and help tools
+  showMenu,
   showHelp,
   
   // Schedule tools  
