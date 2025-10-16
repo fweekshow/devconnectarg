@@ -27,6 +27,7 @@ export interface Schedule {
     registration_required: boolean;
     registration_url?: string;
     tags?: string[];
+    metadata?: Record<string, any>;
     created_at: string; 
     updated_at: string; 
   }

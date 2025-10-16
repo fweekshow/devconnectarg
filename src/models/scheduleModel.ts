@@ -21,6 +21,7 @@ export async function createScheduleTable() {
         registration_required BOOLEAN DEFAULT FALSE,
         registration_url TEXT,
         tags TEXT[],
+        metadata JSONB DEFAULT '{}'::jsonb,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       );
@@ -47,13 +48,14 @@ export async function insertSchedule(
   relevance: number = 0,
   registrationRequired: boolean = false,
   registrationUrl?: string,
-  tags?: string[]
+  tags?: string[],
+  metadata?: any
 ): Promise<number> {
   const result = await pool.query(
-    `INSERT INTO schedules (title, description, start_time, end_time, location, type, category, speaker, capacity, status, relevance, registration_required, registration_url, tags)
-     VALUES ($1, $2, $3::timestamp, $4::timestamp, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+    `INSERT INTO schedules (title, description, start_time, end_time, location, type, category, speaker, capacity, status, relevance, registration_required, registration_url, tags, metadata)
+     VALUES ($1, $2, $3::timestamp, $4::timestamp, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
      RETURNING id`,
-    [title, description, startTime, endTime, location || null, type, category || null, speaker || null, capacity || null, status, relevance, registrationRequired, registrationUrl || null, tags || null]
+    [title, description, startTime, endTime, location || null, type, category || null, speaker || null, capacity || null, status, relevance, registrationRequired, registrationUrl || null, tags || null, metadata || {}]
   );
 
   return result.rows[0].id;
