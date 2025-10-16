@@ -19,6 +19,7 @@ export interface Schedule {
     end_time: string; 
     location?: string;
     type: ScheduleType;
+    category?: string;
     speaker?: string;
     capacity?: number;
     status: ScheduleStatus;

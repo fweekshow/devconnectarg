@@ -25,7 +25,8 @@ const devConnectSchedule = [
     registrationRequired: true,
     registrationUrl: "https://devconnect.org/opening",
     tags: ["opening", "keynote", "ceremony"],
-    relevance: 10
+    relevance: 10,
+    category: "devConnect"
   },
   {
     title: "Base Ecosystem Overview",
@@ -274,6 +275,7 @@ async function initializeSchedule() {
           schedule.endTime,
           schedule.location,
           schedule.type,
+          schedule.category,
           schedule.speaker,
           schedule.capacity || 0,
           schedule.status || 'scheduled',

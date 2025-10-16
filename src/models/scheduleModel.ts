@@ -13,6 +13,7 @@ export async function createScheduleTable() {
         end_time TIMESTAMP NOT NULL,
         location TEXT,
         type TEXT NOT NULL CHECK (type IN ('session', 'workshop', 'activity', 'break', 'meal', 'social', 'other')),
+        category TEXT,
         speaker TEXT,
         capacity INTEGER,
         status TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'live', 'completed', 'cancelled')),
@@ -39,6 +40,7 @@ export async function insertSchedule(
   endTime: string,
   location?: string,
   type: ScheduleType = 'other',
+  category?: string,
   speaker?: string,
   capacity?: number,
   status: ScheduleStatus = 'scheduled',
@@ -48,10 +50,10 @@ export async function insertSchedule(
   tags?: string[]
 ): Promise<number> {
   const result = await pool.query(
-    `INSERT INTO schedules (title, description, start_time, end_time, location, type, speaker, capacity, status, relevance, registration_required, registration_url, tags)
-     VALUES ($1, $2, $3::timestamp, $4::timestamp, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+    `INSERT INTO schedules (title, description, start_time, end_time, location, type, category, speaker, capacity, status, relevance, registration_required, registration_url, tags)
+     VALUES ($1, $2, $3::timestamp, $4::timestamp, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
      RETURNING id`,
-    [title, description, startTime, endTime, location || null, type, speaker || null, capacity || null, status, relevance, registrationRequired, registrationUrl || null, tags || null]
+    [title, description, startTime, endTime, location || null, type, category || null, speaker || null, capacity || null, status, relevance, registrationRequired, registrationUrl || null, tags || null]
   );
 
   return result.rows[0].id;
@@ -63,7 +65,7 @@ export async function getAllActiveSchedules(): Promise<Schedule[]> {
     `SELECT id, title, description,
             to_char(start_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS start_time,
             to_char(end_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS end_time,
-            location, type, speaker, capacity, status, relevance, registration_required, registration_url, tags,
+            location, type, category, speaker, capacity, status, relevance, registration_required, registration_url, tags,
             to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
             to_char(updated_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS updated_at
      FROM schedules
@@ -79,7 +81,7 @@ export async function getSchedulesByType(type: ScheduleType): Promise<Schedule[]
     `SELECT id, title, description,
             to_char(start_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS start_time,
             to_char(end_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS end_time,
-            location, type, speaker, capacity, status, relevance, registration_required, registration_url, tags,
+            location, type, category, speaker, capacity, status, relevance, registration_required, registration_url, tags,
             to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
             to_char(updated_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS updated_at
      FROM schedules
@@ -99,7 +101,7 @@ export async function getSchedulesByDate(date: string): Promise<Schedule[]> {
     `SELECT id, title, description,
             to_char(start_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS start_time,
             to_char(end_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS end_time,
-            location, type, speaker, capacity, status, relevance, registration_required, registration_url, tags,
+            location, type, category, speaker, capacity, status, relevance, registration_required, registration_url, tags,
             to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
             to_char(updated_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS updated_at
      FROM schedules
@@ -116,7 +118,7 @@ export async function getSchedulesByDateRange(startDate: string, endDate: string
     `SELECT id, title, description,
             to_char(start_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS start_time,
             to_char(end_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS end_time,
-            location, type, speaker, capacity, status, relevance, registration_required, registration_url, tags,
+            location, type, category, speaker, capacity, status, relevance, registration_required, registration_url, tags,
             to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
             to_char(updated_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS updated_at
      FROM schedules
@@ -136,7 +138,7 @@ export async function getUpcomingSchedules(hours: number = 24): Promise<Schedule
     `SELECT id, title, description,
             to_char(start_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS start_time,
             to_char(end_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS end_time,
-            location, type, speaker, capacity, status, relevance, registration_required, registration_url, tags,
+            location, type, category, speaker, capacity, status, relevance, registration_required, registration_url, tags,
             to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
             to_char(updated_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS updated_at
      FROM schedules

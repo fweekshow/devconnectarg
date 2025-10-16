@@ -18,7 +18,7 @@
     "lint": "eslint .",
     "revoke": "tsx --env-file .env src/services/scripts/revokeInstallations.ts",
     "start": "node dist/index-agent-sdk.js",
-    "typecheck": "tsc",
+    "schedule": "tsx --env-file .env src/services/scripts/admin-schedule.ts",
     "analytics": "node analytics.js",
     "analytics-cli": "node cli-analytics.js",
     "analytics-railway": "node railway-analytics.js",
