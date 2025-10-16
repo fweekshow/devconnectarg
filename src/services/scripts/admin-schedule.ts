@@ -4,7 +4,6 @@ import { DateTime } from "luxon";
 import { 
   insertSchedule, 
   createScheduleTable,
-  getAllActiveSchedules,
 
 } from "../../models/scheduleModel.js";
 import { ScheduleType, ScheduleStatus } from "../../models/types.js";
@@ -257,11 +256,6 @@ async function initializeSchedule() {
     // Create tables first
     console.log("Creating schedule tables...");
     await createScheduleTable();
-    
-    // Check if schedule already exists
-    const existingSchedules = await getAllActiveSchedules();
-    console.log(`Found ${existingSchedules.length} existing schedules in database.`);
-
     
     console.log("Adding DevConnect 2025 schedule...");
     

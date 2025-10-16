@@ -21,16 +21,20 @@ export async function createUsersTable(): Promise<void> {
 }
 
 export async function incrementActionClick(inboxId: string, actionKey: string): Promise<void> {
-  await pool.query(
-    `UPDATE users
-     SET action_clicks = COALESCE(action_clicks, '{}'::jsonb)
-       || jsonb_build_object(
-            $2::text,
-            COALESCE((action_clicks->>$2)::int, 0) + 1
-          )
-     WHERE inbox_id = $1`,
-    [inboxId, actionKey]
-  );
+  try {
+    await pool.query(
+      `UPDATE users
+      SET action_clicks = COALESCE(action_clicks, '{}'::jsonb)
+        || jsonb_build_object(
+              $2::text,
+              COALESCE((action_clicks->>$2)::int, 0) + 1
+            )
+      WHERE inbox_id = $1`,
+        [inboxId, actionKey]
+      );
+  } catch (error) {
+    console.error("Error incrementing action click:", error);
+  }
 }
 
 export async function incrementRemindersCreated(inboxId: string): Promise<void> {
