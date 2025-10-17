@@ -35,7 +35,6 @@
     "@openzeppelin/contracts": "^5.4.0",
     "@xmtp/agent-sdk": "^1.1.7",
     "@xmtp/content-type-primitives": "^2.0.2",
-    "@xmtp/content-type-reaction": "^2.0.2",
     "@xmtp/content-type-remote-attachment": "^2.0.2",
     "@xmtp/content-type-transaction-reference": "^2.0.2",
     "@xmtp/content-type-wallet-send-calls": "^2.0.0",

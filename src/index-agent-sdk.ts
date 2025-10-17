@@ -12,7 +12,6 @@ import {
   isSidebarRequest,
   setSidebarClient
 } from "./services/agent/tools/sidebarGroups.js";
-import { initDb } from "./store.js";
 import {
   DEBUG_LOGS,
   MENTION_HANDLES,
@@ -20,10 +19,6 @@ import {
 } from "./config.js";
 import { ActionsCodec, type ActionsContent, ContentTypeActions } from "./xmtp-inline-actions/types/ActionsContent.js";
 import { IntentCodec, ContentTypeIntent } from "./xmtp-inline-actions/types/IntentContent.js";
-import {
-  ContentTypeReaction,
-  ReactionCodec,
-} from "@xmtp/content-type-reaction";
 import { connectDb } from './config/db.js';
 import { createUsersTable, incrementActionClick, incrementMessageCount } from './models/usersModel.js';
 import { createScheduleTable } from './models/scheduleModel.js';
@@ -134,7 +129,7 @@ async function main() {
       env: process.env.XMTP_ENV as 'dev' | 'production' || 'production',
       dbPath,
       // Custom codecs for Quick Actions and Reactions
-      codecs: [new ActionsCodec(), new IntentCodec(), new ReactionCodec()],
+      codecs: [new ActionsCodec(), new IntentCodec()],
     });
 
     console.log("🔄 Agent SDK client initialized with Quick Actions codecs");
@@ -184,6 +179,7 @@ async function main() {
         const senderInboxId = ctx.message.senderInboxId;
         const conversationId = ctx.conversation.id;
         const isGroup = ctx.isGroup(); // Use Agent SDK's isGroup() method
+        ctx.sendReaction("👀");
 
         if (DEBUG_LOGS) {
           console.log(`📥 Received message:`, {
@@ -194,7 +190,7 @@ async function main() {
             isGroup
           });
         }
-
+        console.log("🔍 Message content: ****", messageContent);
         // Skip messages from ourselves
         if (senderInboxId === agent.client.inboxId) {
           if (DEBUG_LOGS) {
@@ -235,25 +231,6 @@ async function main() {
           } catch (error) {
             console.warn("⚠️ Could not get sender address:", error);
           }
-        }
-
-        // Send thinking reaction while processing
-        // This is only reached if we're responding (mentioned in group or DM)
-        try {
-          const reactionConversation = await ctx.client.conversations.getConversationById(conversationId);
-          if (reactionConversation) {
-            await reactionConversation.send(
-              {
-                action: "added",
-                content: "👀",
-                reference: ctx.message.id,
-                schema: "shortcode",
-              } as any,
-              ContentTypeReaction
-            );
-          }
-        } catch (reactionError) {
-          console.warn("⚠️ Could not send thinking reaction:", reactionError);
         }
 
         try {
