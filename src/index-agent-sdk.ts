@@ -225,7 +225,7 @@ async function main() {
         // if the agent is added in the third party group, create a new group record
         const exists = await checkGroupExists(conversationId);
       
-        if (!exists) {
+        if (isGroup && !exists) {
           await insertGroupDetails({
             groupId: conversationId,
             groupName: ctx.conversation.name,
