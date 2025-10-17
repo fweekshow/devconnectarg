@@ -7,7 +7,7 @@ export const showMenu = tool(
       contentType: "coinbase.com/actions:1.0",
       content: {
         id: "devconnect_welcome_actions",
-        description: "Hi! I'm Rocky, your DevConnect 2025 Concierge. Here's what I can help you with:",
+        description: "Hi! I'm Rocky, your event buddy at DevConnect. Here's what I can help you with:",
         actions: [
           {
             id: "schedule",
@@ -49,6 +49,12 @@ export const showMenu = tool(
             id: "join_groups",
             label: "More Groups",
             imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464996/vecteezy_join-group-icon-in-trendy-outline-style-isolated-on-white_32201148_mkmtik.jpg",
+            style: "secondary"
+          },
+          {
+            id: "treasure_hunt",
+            label: "Treasure Hunt",
+            imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760561042/ChatGPT_Image_Oct_15_2025_at_05_43_44_PM_wwnxiq.png",
             style: "secondary"
           }
         ]

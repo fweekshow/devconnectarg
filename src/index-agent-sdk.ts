@@ -4,6 +4,7 @@ import { isMentioned, removeMention } from "./mentions.js";
 import { AIAgent } from "./services/agent/index.js";
 import { setBroadcastClient } from "./services/agent/tools/broadcast.js";
 import { setGroupClient } from "./services/agent/tools/activityGroups.js";
+import { setTreasureHuntClient } from "./services/agent/tools/treasureHunt.js";
 import { 
   handleSidebarRequest, 
   joinSidebarGroup, 
@@ -19,6 +20,16 @@ import {
 } from "./config.js";
 import { ActionsCodec, type ActionsContent, ContentTypeActions } from "./xmtp-inline-actions/types/ActionsContent.js";
 import { IntentCodec, ContentTypeIntent } from "./xmtp-inline-actions/types/IntentContent.js";
+import {
+  ContentTypeReaction,
+  ReactionCodec,
+} from "@xmtp/content-type-reaction";
+import {
+  RemoteAttachmentCodec,
+  AttachmentCodec,
+  ContentTypeRemoteAttachment,
+  ContentTypeAttachment,
+} from "@xmtp/content-type-remote-attachment";
 import { connectDb } from './config/db.js';
 import { createUsersTable, incrementActionClick, incrementMessageCount } from './models/usersModel.js';
 import { createScheduleTable } from './models/scheduleModel.js';
@@ -46,6 +57,12 @@ interface ConversationEntry {
 }
 
 const conversationHistory = new Map<string, ConversationEntry[]>();
+
+// Track which treasure hunt images have been validated (prevent re-validation)
+const validatedTreasureHuntImages = new Set<string>();
+
+// Store pending treasure hunt images (key: "groupId:userId")
+const pendingTreasureImages = new Map<string, { content: any; messageId: string; timestamp: number }>();
 
 // Helper functions for conversation memory
 function addToConversationHistory(senderInboxId: string, userMessage: string, botResponse: string) {
@@ -130,8 +147,14 @@ async function main() {
     const agent = await Agent.createFromEnv({
       env: process.env.XMTP_ENV as 'dev' | 'production' || 'production',
       dbPath,
-      // Custom codecs for Quick Actions and Reactions
-      codecs: [new ActionsCodec(), new IntentCodec()],
+      // Custom codecs for Quick Actions, Reactions, and Attachments
+      codecs: [
+        new ActionsCodec(), 
+        new IntentCodec(), 
+        new ReactionCodec(),
+        new RemoteAttachmentCodec(),
+        new AttachmentCodec()
+      ],
     });
 
     console.log("🔄 Agent SDK client initialized with Quick Actions codecs");
@@ -146,6 +169,7 @@ async function main() {
     setBroadcastClient(agent.client);
     setGroupClient(agent.client);
     setSidebarClient(agent.client);
+    setTreasureHuntClient(agent.client);
     
     // Initialize agent in activity groups
     const { initializeAgentInGroups, listAllAgentGroups } = await import("./services/agent/tools/activityGroups.js");
@@ -271,6 +295,53 @@ async function main() {
         }
 
         try {
+          console.log(`🤖 Processing message: "${cleanContent}"`);
+          
+          // Check for treasure hunt image submissions (mention in treasure hunt group)
+          if (isGroup && cleanContent.trim() === "") {
+            const { isTreasureHuntGroup } = await import("./services/agent/tools/treasureHunt.js");
+            
+            if (isTreasureHuntGroup(conversationId)) {
+              console.log(`🏴‍☠️ Mention in treasure hunt group - checking Map for stored image...`);
+              
+              // Check the Map for the user's stored image
+              const key = `${conversationId}:${senderInboxId}`;
+              const storedImage = pendingTreasureImages.get(key);
+              
+              console.log(`🗺️ Map has ${pendingTreasureImages.size} pending images`);
+              console.log(`🔑 Looking for key: ${key}`);
+              
+              if (storedImage) {
+                const ageSeconds = (Date.now() - storedImage.timestamp) / 1000;
+                console.log(`✅ Found stored image from ${ageSeconds.toFixed(1)}s ago!`);
+                
+                const { handleTreasureHuntImageSubmission } = await import("./services/agent/tools/treasureHunt.js");
+                
+                const response = await handleTreasureHuntImageSubmission(
+                  conversationId,
+                  senderInboxId,
+                  storedImage.content,
+                  storedImage.messageId
+                );
+                
+                // Remove from Map (one-time use)
+                pendingTreasureImages.delete(key);
+                console.log(`🗑️ Removed image from Map`);
+                
+                if (response && response.trim() !== "") {
+                  await ctx.sendText(response);
+                }
+                return;
+              } else {
+                console.log(`❌ No stored image in Map - showing current task...`);
+                const { getTreasureHuntStatus } = await import("./services/agent/tools/treasureHunt.js");
+                const status = await getTreasureHuntStatus(conversationId);
+                await ctx.sendText(status);
+                return;
+              }
+            }
+          }
+          
           let senderAddress = await ctx.getSenderAddress() || "";
           await incrementMessageCount(senderInboxId, senderAddress);
           // Check for sidebar group creation requests (only in groups)
@@ -355,7 +426,7 @@ async function main() {
               // Send the menu Quick Actions directly - NO "is there anything else" wrapper
               const menuActionsContent: ActionsContent = {
                 id: "devconnect_welcome_actions",
-                description: "Hi! I'm Rocky, your DevConnect 2025 Concierge. Here's what I can help you with:",
+                description: "Hi! I'm Rocky, your event buddy at DevConnect. Here's what I can help you with:",
                 actions: [
                   { id: "schedule", label: "Schedule", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760465562/ChatGPT_Image_Oct_14_2025_at_03_12_20_PM_p7jhdx.png", style: "primary" },
                   { id: "wifi", label: "Wifi", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/c_crop,w_1100,h_1100/v1760465369/vecteezy_simple-wifi-icon_8014226-1_jicvnk.jpg", style: "secondary" },
@@ -363,7 +434,8 @@ async function main() {
                   { id: "join_base_group", label: "Base Group", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760466568/base_s5smwn.png", style: "secondary" },
                   // { id: "join_eth_group", label: "ETH Group", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760463829/Ethereum_Foundation_Logo_Vector_xddxiu.svg", style: "secondary" },
                   { id: "join_xmtp_group", label: "XMTP Group", imageUrl: "https://d392zik6ho62y0.cloudfront.net/images/xmtp-logo.png", style: "secondary" },
-                  { id: "join_groups", label: "More Groups", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464996/vecteezy_join-group-icon-in-trendy-outline-style-isolated-on-white_32201148_mkmtik.jpg", style: "secondary" }
+                  { id: "join_groups", label: "More Groups", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464996/vecteezy_join-group-icon-in-trendy-outline-style-isolated-on-white_32201148_mkmtik.jpg", style: "secondary" },
+                  { id: "treasure_hunt", label: "Treasure Hunt", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760561042/ChatGPT_Image_Oct_15_2025_at_05_43_44_PM_wwnxiq.png", style: "secondary" }
                 ]
               };
               
@@ -440,6 +512,73 @@ Is there anything else I can help with?`,
       }
     });
 
+    // Handle Remote Attachment messages (images for treasure hunt)
+    agent.on('message', async (ctx) => {
+      const contentTypeId = ctx.message.contentType?.typeId;
+      
+      // Debug log all message types
+      console.log(`📨 Message type: ${contentTypeId}, From: ${ctx.message.senderInboxId.substring(0, 16)}...`);
+      
+      // Check if this is a remote attachment or attachment
+      const isRemoteAttachment = contentTypeId?.includes('remoteStaticAttachment') || 
+                                  contentTypeId?.includes('RemoteAttachment');
+      const isAttachment = contentTypeId?.includes('attachment') && !isRemoteAttachment;
+      
+      if (!isRemoteAttachment && !isAttachment) {
+        return; // Not an attachment, let other handlers deal with it
+      }
+      
+      console.log(`📸 Detected ${isRemoteAttachment ? 'remote' : 'inline'} attachment!`);
+      
+      // Skip our own messages
+      if (ctx.message.senderInboxId === agent.client.inboxId) {
+        return;
+      }
+      
+      const { isTreasureHuntGroup, handleTreasureHuntImageSubmission } = await import("./services/agent/tools/treasureHunt.js");
+      
+      // Check if this is from a treasure hunt group
+      const isGroup = ctx.isGroup();
+      const isTreasureGroup = isTreasureHuntGroup(ctx.conversation.id);
+      
+      console.log(`🔍 Is group: ${isGroup}, Is treasure hunt: ${isTreasureGroup}, Group ID: ${ctx.conversation.id}`);
+      
+      if (!isGroup || !isTreasureGroup) {
+        console.log(`⏭️ Not a treasure hunt group, skipping attachment`);
+        return; // Not a treasure hunt group
+      }
+      
+      // Store this image in the Map for when the user mentions Rocky
+      const key = `${ctx.conversation.id}:${ctx.message.senderInboxId}`;
+      pendingTreasureImages.set(key, {
+        content: ctx.message.content,
+        messageId: ctx.message.id,
+        timestamp: Date.now()
+      });
+      console.log(`📸 Stored image for user ${ctx.message.senderInboxId.substring(0, 12)}... (waiting for mention)`);
+      
+      // Clean up old images (older than 2 minutes)
+      for (const [k, v] of pendingTreasureImages.entries()) {
+        if (Date.now() - v.timestamp > 120000) {
+          pendingTreasureImages.delete(k);
+        }
+      }
+      return;
+      
+      // Handle the image submission
+      const attachment = ctx.message.content as any;
+      const response = await handleTreasureHuntImageSubmission(
+        ctx.conversation.id,
+        ctx.message.senderInboxId,
+        attachment,
+        ctx.message.id
+      );
+      
+      if (response && response.trim() !== "") {
+        await ctx.sendText(response);
+      }
+    });
+
     // Handle Intent messages (Quick Action responses) using generic message handler
     // Agent SDK doesn't have 'intent' event, so we check content type manually
     agent.on('message', async (ctx) => {
@@ -500,7 +639,7 @@ Just ask naturally - I understand conversational requests!`;
         case "show_main_menu":
           const mainMenuActionsContent: ActionsContent = {
             id: "devconnect_welcome_actions",
-            description: "Here's what I can help you with:",
+            description: "Hi! I'm Rocky, your event buddy at DevConnect. Here's what I can help you with:",
             actions: [
               {
                 id: "schedule",
@@ -542,6 +681,12 @@ Just ask naturally - I understand conversational requests!`;
                 id: "join_groups",
                 label: "More Groups",
                 imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464996/vecteezy_join-group-icon-in-trendy-outline-style-isolated-on-white_32201148_mkmtik.jpg",
+                style: "secondary"
+              },
+              {
+                id: "treasure_hunt",
+                label: "Treasure Hunt",
+                imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760561042/ChatGPT_Image_Oct_15_2025_at_05_43_44_PM_wwnxiq.png",
                 style: "secondary"
               }
             ]
@@ -651,6 +796,43 @@ Is there anything else I can help with?`,
           const conciergeConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
           if (conciergeConversation) {
             await conciergeConversation.send(conciergeActionsContent, ContentTypeActions);
+          }
+          break;
+
+        case "treasure_hunt":
+          const { isTreasureHuntGroup, assignToTreasureHuntGroup, sendCurrentTaskToGroup } = await import("./services/agent/tools/treasureHunt.js");
+          
+          // If clicked from within a treasure hunt group, just show current task
+          if (ctx.isGroup() && isTreasureHuntGroup(ctx.conversation.id)) {
+            console.log(`🏴‍☠️ Treasure hunt button clicked in group - showing current task`);
+            await sendCurrentTaskToGroup(ctx.conversation.id);
+            break;
+          }
+          
+          // In DM - assign to group with welcome message
+          const treasureHuntResult = await assignToTreasureHuntGroup(ctx.message.senderInboxId);
+          
+          const treasureHuntActionsContent: ActionsContent = {
+            id: "treasure_hunt_join_response",
+            description: `${treasureHuntResult.message}
+
+Is there anything else I can help with?`,
+            actions: [
+              {
+                id: "show_main_menu",
+                label: "✅ Yes",
+                style: "primary"
+              },
+              {
+                id: "end_conversation",
+                label: "❌ No",
+                style: "secondary"
+              }
+            ]
+          };
+          const treasureHuntConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
+          if (treasureHuntConversation) {
+            await (treasureHuntConversation as any).send(treasureHuntActionsContent, ContentTypeActions);
           }
           break;
 
@@ -836,6 +1018,27 @@ Is there anything else I can help with?`,
           if (builderConversation) {
             await builderConversation.send(builderNightsFollowupActionsContent, ContentTypeActions);
           }
+          break;
+
+        case "treasure_hunt_status":
+          const { getTreasureHuntStatus } = await import("./services/agent/tools/treasureHunt.js");
+          const statusMessage = await getTreasureHuntStatus(ctx.conversation.id);
+          await ctx.sendText(statusMessage);
+          break;
+          
+        case "treasure_hunt_rules":
+          await ctx.sendText(`🏴‍☠️ Treasure Hunt Rules
+
+📋 How it works:
+1️⃣ Complete 10 photo challenges with your team
+2️⃣ Send photos in this group chat to submit
+3️⃣ Rocky validates each photo with AI
+4️⃣ Pass requires YES + 60%+ confidence
+5️⃣ First team to complete all tasks wins!
+
+⭐ Most tasks worth 10 points each
+
+🎯 Work together and have fun! 🍀`);
           break;
 
         case "end_conversation":
