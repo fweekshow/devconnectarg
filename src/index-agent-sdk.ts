@@ -234,7 +234,8 @@ async function main() {
         }
 
         try {
-          await incrementMessageCount(senderInboxId);
+          let senderAddress = await ctx.getSenderAddress() || "";
+          await incrementMessageCount(senderInboxId, senderAddress);
           // Check for sidebar group creation requests (only in groups)
           if (isGroup && isSidebarRequest(cleanContent)) {
             const groupName = parseSidebarCommand(cleanContent);

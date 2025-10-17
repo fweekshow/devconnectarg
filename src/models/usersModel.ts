@@ -46,13 +46,13 @@ export async function incrementRemindersCreated(inboxId: string): Promise<void> 
     );
 }
 
-export async function incrementMessageCount(inboxId: string): Promise<void> {
+export async function incrementMessageCount(inboxId: string, walletAddress: string): Promise<void> {
   await pool.query(
-    `INSERT INTO users (inbox_id, total_messages)
-     VALUES ($1, 1)
+    `INSERT INTO users (inbox_id, wallet_address, total_messages)
+     VALUES ($1, $2, 1)
      ON CONFLICT (inbox_id) DO UPDATE
      SET total_messages = users.total_messages + 1,
          last_message_at = NOW()`,
-    [inboxId]
+    [inboxId, walletAddress]
   );
 }
