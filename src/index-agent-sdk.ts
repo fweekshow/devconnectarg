@@ -1,5 +1,5 @@
 import { Agent } from '@xmtp/agent-sdk';
-import { createReminderDispatcher } from "./dispatcher.js";
+import { createReminderDispatcher } from "./services/agent/tools/reminder/dispatcher.js";
 import { isMentioned, removeMention } from "./mentions.js";
 import { AIAgent } from "./services/agent/index.js";
 import { setBroadcastClient } from "./services/agent/tools/broadcast.js";
@@ -13,7 +13,6 @@ import {
   isSidebarRequest,
   setSidebarClient
 } from "./services/agent/tools/sidebarGroups.js";
-import { initDb } from "./store.js";
 import {
   DEBUG_LOGS,
   MENTION_HANDLES,
@@ -31,11 +30,21 @@ import {
   ContentTypeRemoteAttachment,
   ContentTypeAttachment,
 } from "@xmtp/content-type-remote-attachment";
+import { connectDb } from './config/db.js';
+import { createUsersTable, incrementActionClick, incrementMessageCount } from './models/usersModel.js';
+import { createScheduleTable } from './models/scheduleModel.js';
+import { createReminderTable } from './models/reminderModel.js';
+import { checkGroupExists, createGroupsTable, incrementGroupMemberJoin, incrementGroupMemberLeave, incrementGroupMentionedMessage, incrementGroupMessage, insertGroupDetails } from "./models/groupsModel.js";
 
 console.log(`🚀 Starting DevConnect 2025 Concierge Agent (Agent SDK)`);
 
-// Initialize database for reminders
-initDb();
+// Initialize database 
+await connectDb();
+// create users tables
+await createUsersTable();
+await createScheduleTable();
+await createReminderTable();
+await createGroupsTable();
 
 // Initialize AI agent
 const aiAgent = new AIAgent();
@@ -189,6 +198,21 @@ async function main() {
     console.log("  - Direct messages (DMs)");
     console.log(`  - Group messages when mentioned with @${MENTION_HANDLES.split(',')[0]}`);
     
+    agent.on('group-update', async (ctx) => {
+      const content = ctx.message.content as any;
+
+      if (content.addedInboxes?.length > 0) {
+        await incrementGroupMemberJoin(ctx.message.conversationId);
+        console.log(`New members added: ${JSON.stringify(content.addedInboxes)}`);
+      }
+
+      if (content.removedInboxes?.length > 0) {
+        await incrementGroupMemberLeave(ctx.message.conversationId);
+        console.log(`Members removed: ${JSON.stringify(content.removedInboxes)}`);
+      }
+
+    });
+
     // Handle text messages
     agent.on('text', async (ctx) => {
       try {
@@ -196,6 +220,26 @@ async function main() {
         const senderInboxId = ctx.message.senderInboxId;
         const conversationId = ctx.conversation.id;
         const isGroup = ctx.isGroup(); // Use Agent SDK's isGroup() method
+        ctx.sendReaction("👀");
+
+        // if the agent is added in the third party group, create a new group record
+        const exists = await checkGroupExists(conversationId);
+      
+        if (!exists) {
+          await insertGroupDetails({
+            groupId: conversationId,
+            groupName: ctx.conversation.name,
+            groupType: 'activity',
+            createdBy: await ctx.getSenderAddress(),
+            memberCount: (await ctx.conversation.members()).length,
+            description: `Activity group for ${ctx.conversation.name}`,
+            originalGroupId: conversationId,
+            totalMessages: 0,
+            totalMentionedMessages: 0,
+            totalLeaves: 0,
+            metadata: {},
+          });
+        };
 
         if (DEBUG_LOGS) {
           console.log(`📥 Received message:`, {
@@ -206,7 +250,7 @@ async function main() {
             isGroup
           });
         }
-
+        console.log("🔍 Message content: ****", messageContent);
         // Skip messages from ourselves
         if (senderInboxId === agent.client.inboxId) {
           if (DEBUG_LOGS) {
@@ -221,14 +265,15 @@ async function main() {
         // In groups: ONLY respond if mentioned
         // In DMs: Always respond
         if (isGroup && !isMentioned(messageContent)) {
+          await incrementGroupMessage(conversationId);
           if (DEBUG_LOGS) {
             console.log("⏭️ Not mentioned in group, skipping");
           }
           return; // Exit early - don't process or send reactions
         }
-
         // Clean mentions from group messages
         if (isGroup && isMentioned(messageContent)) {
+          await incrementGroupMentionedMessage(conversationId);
           cleanContent = removeMention(messageContent);
           if (DEBUG_LOGS) {
             console.log("👋 Mentioned in group, will respond");
@@ -247,25 +292,6 @@ async function main() {
           } catch (error) {
             console.warn("⚠️ Could not get sender address:", error);
           }
-        }
-
-        // Send thinking reaction while processing
-        // This is only reached if we're responding (mentioned in group or DM)
-        try {
-          const reactionConversation = await ctx.client.conversations.getConversationById(conversationId);
-          if (reactionConversation) {
-            await reactionConversation.send(
-              {
-                action: "added",
-                content: "👀",
-                reference: ctx.message.id,
-                schema: "shortcode",
-              } as any,
-              ContentTypeReaction
-            );
-          }
-        } catch (reactionError) {
-          console.warn("⚠️ Could not send thinking reaction:", reactionError);
         }
 
         try {
@@ -316,13 +342,14 @@ async function main() {
             }
           }
           
+          let senderAddress = await ctx.getSenderAddress() || "";
+          await incrementMessageCount(senderInboxId, senderAddress);
           // Check for sidebar group creation requests (only in groups)
           if (isGroup && isSidebarRequest(cleanContent)) {
             const groupName = parseSidebarCommand(cleanContent);
             if (groupName) {
-              console.log(`🎯 Processing sidebar group request: "${groupName}"`);
-              const sidebarResponse = await handleSidebarRequest(groupName, ctx.message, agent.client as any, ctx.conversation);
-              if (sidebarResponse && sidebarResponse.trim() !== "") {
+              const sidebarResponse = await handleSidebarRequest(groupName, ctx.message, agent.client as any, ctx.conversation, senderAddress);
+              if (sidebarResponse && sidebarResponse.trim() !== "") {                 
                 await ctx.sendText(sidebarResponse);
               }
               return;
@@ -573,6 +600,8 @@ Is there anything else I can help with?`,
       // Handle different action IDs (same logic as your original implementation)
       switch (actionId) {
         case "schedule":
+          console.log("inside schedule");
+          await incrementActionClick(ctx.message.senderInboxId, "Schedule");
           const scheduleResponse = `You can view the full schedule at devconnect.org/calendar and sign up for sessions. Feel free to ask me any questions about the schedule and I'll help you craft an epic DevConnect experience.
 
 Examples:
@@ -674,6 +703,7 @@ Just ask naturally - I understand conversational requests!`;
           break;
           
         case "wifi":
+          await incrementActionClick(ctx.message.senderInboxId, "Wifi");
           const wifiActionsContent: ActionsContent = {
             id: "wifi_followup_actions",
             description: `📶 DevConnect 2025 WiFi Information
@@ -703,6 +733,7 @@ Is there anything else I can help with?`,
           break;
 
         case "event_logistics":
+          await incrementActionClick(ctx.message.senderInboxId, "EventLogistics");
           await ctx.sendText(`📋 Event Logistics
 
 🗓️ Dates: November 13-19, 2025
@@ -739,6 +770,7 @@ Visit: https://devconnect.org/calendar `);
           break;
 
         case "concierge_support":
+          await incrementActionClick(ctx.message.senderInboxId, "ConciergeSupport");
           const conciergeActionsContent: ActionsContent = {
             id: "concierge_support_actions",
             description: `Concierge Support
@@ -805,6 +837,7 @@ Is there anything else I can help with?`,
           break;
 
         case "join_groups":
+          await incrementActionClick(ctx.message.senderInboxId, "MoreGroups");
           const { generateGroupSelectionQuickActions } = await import("./services/agent/tools/activityGroups.js");
           const groupSelectionActions = generateGroupSelectionQuickActions();
           const groupSelectionConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
@@ -814,6 +847,7 @@ Is there anything else I can help with?`,
           break;
 
         case "join_base_group":
+          await incrementActionClick(ctx.message.senderInboxId, "BaseGroup");
           const { addMemberToBaseGlobalEvents } = await import("./services/agent/tools/activityGroups.js");
           const baseGroupResult = await addMemberToBaseGlobalEvents(ctx.message.senderInboxId);
           
@@ -870,6 +904,7 @@ Is there anything else I can help with?`,
           break;
 
         case "join_xmtp_group":
+          await incrementActionClick(ctx.message.senderInboxId, "XMTPGroup");
           const { addMemberToXMTPGroup } = await import("./services/agent/tools/activityGroups.js");
           const xmtpGroupResult = await addMemberToXMTPGroup(ctx.message.senderInboxId);
           
@@ -899,6 +934,7 @@ Is there anything else I can help with?`,
 
         // DevConnect group joining cases
         case "join_ethcon_argentina":
+          await incrementActionClick(ctx.message.senderInboxId, "EthconArgentina");
           const { addMemberToActivityGroup: addEthconArg } = await import("./services/agent/tools/activityGroups.js");
           const ethconArgResult = await addEthconArg("ethcon_argentina", ctx.message.senderInboxId);
           
@@ -927,6 +963,7 @@ Is there anything else I can help with?`,
           break;
 
         case "join_staking_summit":
+          await incrementActionClick(ctx.message.senderInboxId, "StakingSummit");
           const { addMemberToActivityGroup: addStakingSummit } = await import("./services/agent/tools/activityGroups.js");
           const stakingSummitResult = await addStakingSummit("staking_summit", ctx.message.senderInboxId);
           
@@ -955,6 +992,7 @@ Is there anything else I can help with?`,
           break;
 
         case "join_builder_nights":
+          await incrementActionClick(ctx.message.senderInboxId, "BuilderNights");
           const { addMemberToActivityGroup: addBuilderNights } = await import("./services/agent/tools/activityGroups.js");
           const builderNightsResult = await addBuilderNights("builder_nights", ctx.message.senderInboxId);
           

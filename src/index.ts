@@ -1,5 +1,5 @@
 import { Client, type Signer, type DecodedMessage, Group } from "@xmtp/node-sdk";
-import { createReminderDispatcher } from "./dispatcher.js";
+import { createReminderDispatcher } from "./services/agent/tools/reminder/dispatcher.js";
 import { isMentioned, removeMention } from "./mentions.js";
 import { AIAgent } from "./services/agent/index.js";
 import { setBroadcastClient } from "./services/agent/tools/broadcast.js";
@@ -23,8 +23,7 @@ import {
   getEncryptionKeyFromHex,
   logAgentDetails,
 } from "./services/helpers/client.js";
-import { setReminder } from "./services/agent/tools/reminder.js";
-
+import { cancelAllReminders, cancelPendingReminder, fetchAllPendingReminders, setReminder } from "./services/agent/tools/reminder/reminder.js";
 import { initDb } from "./store.js";
 import {
   DEBUG_LOGS,
@@ -36,11 +35,13 @@ import {
 } from "./config.js";
 import { ActionsCodec, type ActionsContent, ContentTypeActions } from "./xmtp-inline-actions/types/ActionsContent.js";
 import { IntentCodec, ContentTypeIntent } from "./xmtp-inline-actions/types/IntentContent.js";
-import { parseReminderText } from "./services/agent/tools/reminder.js";
+import { parseReminderText } from "./services/helpers/reminderHelper.js";
+// import { createTables } from "./models/reminderModel.js"; // Using store system instead
 // setReminder and other reminder tools are dynamically imported in helper functions below
+import pool, { connectDb } from "./config/db.js";
 
 if (!WALLET_KEY) {
-  throw new Error("WALLET_KEY is required");
+  throw new Error("WALLET_KEY is required")
 }
 
 if (!DB_ENCRYPTION_KEY) {
@@ -199,7 +200,6 @@ async function handleMessage(message: DecodedMessage, client: Client) {
 
     try {
       console.log(`🤖 Processing message: "${cleanContent}"`);
-      
       // Check for sidebar group creation requests (only in groups)
       console.log(`🔍 isGroup: ${isGroup}, isSidebarRequest: ${isSidebarRequest(cleanContent)}`);
       if (isGroup && isSidebarRequest(cleanContent)) {
@@ -214,6 +214,7 @@ async function handleMessage(message: DecodedMessage, client: Client) {
           return; // Exit early, sidebar request handled
         }
       }
+      
 
       // Check for reminder commands
       if (!isGroup && cleanContent.toLowerCase().startsWith("/reminder ")) {
@@ -222,26 +223,35 @@ async function handleMessage(message: DecodedMessage, client: Client) {
         // 1) List reminders
         const listCommands = ["list", "list all", "show", "show all"]; // fixed stray comma
         if (listCommands.includes(reminderText.toLowerCase())) {
-          await handleReminderList(senderInboxId, conversation);
+          await fetchAllPendingReminders.invoke({ inboxId: senderInboxId });
           return;
         }
         
         // 2) Cancel all reminders
         const cancelCommands = ["cancel", "cancel all", "delete", "delete all", "clear", "clear all"];
         if (cancelCommands.includes(reminderText.toLowerCase())) {
-          await handleReminderCancelAll(senderInboxId, conversation);
+          await cancelAllReminders.invoke({ inboxId: senderInboxId });
           return;
         }
         
         // 3) Cancel specific reminder by ID
         const cancelIdMatch = reminderText.match(/^(cancel|delete)\s+(\d+)$/i);
         if (cancelIdMatch) {
-          await handleReminderCancelById(parseInt(cancelIdMatch[2]), conversation, senderInboxId);
+          await cancelPendingReminder.invoke({ reminderId: parseInt(cancelIdMatch[2]) });
           return;
         }
         
         // 4) Set a reminder (parse time + message)
-        await handleReminderSet(reminderText, senderInboxId, conversationId, conversation);
+        console.log("inside reminders");
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const { targetTime } = parseReminderText(reminderText, timezone);
+        if (!targetTime) {
+          await conversation.send(
+            `I couldn't understand the time. Try examples like:\n- "in 2 minutes to call mom"\n- "tomorrow at 2pm to have lunch"`,
+          );
+          return;
+        }
+        await setReminder.invoke({ inboxId: senderInboxId, conversationId, targetTime, message: reminderText, userTimezone: timezone });
         return;
       }
       
@@ -829,72 +839,14 @@ Is there anything else I can help with?`,
     console.error("❌ Error processing message:", error);
   }
 }
-
-// ===== Reminder helper functions =====
-async function handleReminderList(inboxId: string, conversation: any) {
-  try {
-    const { fetchAllPendingReminders } = await import("./services/agent/tools/reminder.js");
-    const result = await fetchAllPendingReminders.invoke({ inboxId });
-    await conversation.send(result);
-  } catch (error: any) {
-    await conversation.send(`Failed to list reminders: ${error.message}`);
-  }
-}
-
-async function handleReminderCancelAll(inboxId: string, conversation: any) {
-  try {
-    const { cancelAllReminders } = await import("./services/agent/tools/reminder.js");
-    const result = await cancelAllReminders.invoke({ inboxId });
-    await conversation.send(result);
-  } catch (error: any) {
-    await conversation.send(`Failed to cancel reminders: ${error.message}`);
-  }
-}
-
-async function handleReminderCancelById(reminderId: number, conversation: any, inboxIdForLog?: string) {
-  try {
-    const { cancelPendingReminder } = await import("./services/agent/tools/reminder.js");
-    const result = await cancelPendingReminder.invoke({ reminderId });
-    await conversation.send(result);
-  } catch (error: any) {
-    await conversation.send(`Failed to cancel reminder: ${error.message}`);
-  }
-}
-
-async function handleReminderSet(
-  reminderText: string,
-  inboxId: string,
-  conversationId: string,
-  conversation: any,
-) {
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const { targetTime, message } = parseReminderText(reminderText, timezone);
-  if (!targetTime) {
-    await conversation.send(
-      `I couldn't understand the time. Try examples like:\n- "in 2 minutes to call mom"\n- "tomorrow at 2pm to have lunch"`,
-    );
-    return;
-  }
-
-  try {
-    const result = await setReminder.invoke({
-      inboxId,
-      conversationId,
-      targetTime,
-      message,
-      userTimezone: timezone,
-    });
-    await conversation.send(result);
-  } catch (err: any) {
-    console.error("Reminder error:", err);
-    await conversation.send(`Failed to set reminder: ${err.message}`);
-  }
-}
-
 // Railway monitoring will handle health checks automatically
 
 async function main() {
   try {
+    // Initialize database first
+    console.log("🔄 Initializing database...");
+    console.log("🔄 Database initialized successfully");
+    
     // Get and log current date/time for agent context
     const now = new Date();
     const currentDateTime = now.toLocaleString('en-US', {
@@ -1138,6 +1090,7 @@ Just ask naturally - I understand conversational requests!`;
           }
           break;
         case "wifi":
+          // Track wifi quick action
           const wifiActionsContent: ActionsContent = {
             id: "wifi_followup_actions",
             description: `📶 DevConnect 2025 WiFi Information
@@ -1163,6 +1116,7 @@ Is there anything else I can help with?`,
           await (conversation as any).send(wifiActionsContent, ContentTypeActions);
           break;
         case "event_logistics":
+          // Track event_logistics click
           await conversation.send(`📋 Event Logistics
 
 🗓️ Dates: November 13-19, 2025
@@ -1195,6 +1149,7 @@ Visit: https://devconnect.org/calendar `);
           await (conversation as any).send(logisticsFollowupActionsContent, ContentTypeActions);
           break;
         case "concierge_support":
+          // Track concierge_support quick action
           const conciergeActionsContent: ActionsContent = {
             id: "concierge_support_actions",
             description: `Concierge Support
@@ -1237,6 +1192,7 @@ Support contact information will be available closer to the event.`);
         */ // END BASECAMP URGENT SUPPORT
         
         case "join_groups":
+          // Track join_groups quick action
           const { generateGroupSelectionQuickActions } = await import("./services/agent/tools/activityGroups.js");
           const groupSelectionActions = generateGroupSelectionQuickActions();
           await (conversation as any).send(groupSelectionActions, ContentTypeActions);
@@ -1319,6 +1275,7 @@ Is there anything else I can help with?`,
           break;
         
         case "base_info":
+          // Track base_info quick action
           const baseMessage = `🔵 Base
 
 Base is an Ethereum L2 built by Coinbase, incubated inside the company.
@@ -1354,6 +1311,7 @@ Is there anything else I can help with?`,
           break;
         
         case "xmtp_info":
+          // Track xmtp_info quick action
           const xmtpMessage = `💬 XMTP
 
 XMTP (Extensible Message Transport Protocol) is an open protocol for secure, decentralized messaging.

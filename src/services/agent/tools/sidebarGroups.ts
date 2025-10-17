@@ -2,6 +2,7 @@ import type { Client, DecodedMessage, Conversation } from "@xmtp/node-sdk";
 import { ContentTypeActions, type ActionsContent } from "../../../xmtp-inline-actions/types/ActionsContent.js";
 import { getName } from "@coinbase/onchainkit/identity";
 import { base } from "viem/chains";
+import { insertGroupDetails } from "@/models/groupsModel.js";
 
 interface SidebarGroup {
   id: string;
@@ -83,7 +84,8 @@ export async function handleSidebarRequest(
   groupName: string,
   originalMessage: DecodedMessage,
   client: Client,
-  originalConversation: Conversation
+  originalConversation: Conversation,
+  senderAddress: string
 ): Promise<string> {
   try {
     if (!sidebarClient) {
@@ -149,6 +151,21 @@ export async function handleSidebarRequest(
 
     // Step 7: Send invitation quick actions with agent-specific namespacing
     const agentId = sidebarClient!.inboxId.slice(0, 8); // Use first 8 chars of inbox ID as unique identifier
+    
+    await insertGroupDetails({
+      groupId: sidebarGroup.id,
+      groupName: groupName,
+      groupType: 'sidebar',
+      createdBy: senderAddress,
+      memberCount: 3, // requester + bankr + agent
+      description: `Sidebar group for ${groupName}`,
+      originalGroupId: originalGroupId,
+      totalMessages: 0,
+      totalMentionedMessages: 0,
+      totalLeaves: 0,
+      metadata: {},
+    });
+   
     
     const invitationActions: ActionsContent = {
       id: `devconnect_827491_${agentId}_sidebar_invite_${sidebarGroup.id}`,
@@ -291,7 +308,6 @@ export async function declineSidebarGroup(
  */
 export function parseSidebarCommand(content: string): string | null {
   const trimmedContent = content.trim();
-  
   // Try with @devconnectarg.base.eth prefix first (full basename)
   let sidebarMatch = trimmedContent.match(/@devconnectarg\.base\.eth sidebar (?:this (?:conversation )?)?(.+)/i);
   if (sidebarMatch) {
@@ -323,7 +339,7 @@ export function isSidebarRequest(content: string): boolean {
   return lowerContent.includes('@devconnectarg.base.eth sidebar') ||
          lowerContent.includes('@devconnectarg sidebar') || 
          lowerContent.includes('.base.eth sidebar') || // Handles cleaned content after mention removal
-         lowerContent.startsWith('sidebar ') ||
+         lowerContent.startsWith('sidebar') ||
          /^sidebar\s+/i.test(content.trim()); // More flexible pattern
 }
 
