@@ -4,7 +4,6 @@ import { Reminder } from "./types";
 
 export async function createReminderTable() {
   try {
-
     await pool.query(`
       CREATE TABLE IF NOT EXISTS reminders (
         id SERIAL PRIMARY KEY,
@@ -16,19 +15,18 @@ export async function createReminderTable() {
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
-
-    console.log("Tables created successfully");
   } catch (error) {
-    console.error("Error creating tables:", error);
+    console.error("Error creating reminders table:", error);
   }
 }
 
 export async function getReminders(): Promise<Reminder[]> {
-  const result = await pool.query("SELECT * FROM reminders ORDER BY created_at ASC;");
+  const result = await pool.query(
+    `SELECT * FROM reminders ORDER BY created_at ASC`
+  );
   return result.rows as Reminder[];
 }
 
-// 🟢 Insert new reminder
 export async function insertReminder(
   inboxId: string,
   conversationId: string,
@@ -41,11 +39,9 @@ export async function insertReminder(
      RETURNING id`,
     [inboxId, conversationId, targetTime, message]
   );
-
   return result.rows[0].id;
 }
 
-// 🟢 List all pending reminders
 export async function listPendingReminders(): Promise<Reminder[]> {
   const result = await pool.query(
     `SELECT id, inbox_id, conversation_id,
@@ -59,7 +55,6 @@ export async function listPendingReminders(): Promise<Reminder[]> {
   return result.rows;
 }
 
-// 🟢 List pending reminders for a specific inbox
 export async function listAllPendingForInbox(inboxId: string): Promise<Reminder[]> {
   const result = await pool.query(
     `SELECT id, inbox_id, conversation_id,
@@ -74,18 +69,15 @@ export async function listAllPendingForInbox(inboxId: string): Promise<Reminder[
   return result.rows;
 }
 
-// 🟢 Mark reminder as sent
 export async function markReminderSent(id: number): Promise<void> {
   await pool.query(`UPDATE reminders SET sent = TRUE WHERE id = $1`, [id]);
 }
 
-// 🟢 Cancel a specific reminder
 export async function cancelReminder(id: number): Promise<boolean> {
   const result = await pool.query(`DELETE FROM reminders WHERE id = $1`, [id]);
-  return result.rowCount && result.rowCount >= 0 ? true : false;
+  return result.rowCount ? result.rowCount > 0 : false;
 }
 
-// 🟢 Cancel all pending reminders for an inbox
 export async function cancelAllRemindersForInbox(inboxId: string): Promise<number> {
   const result = await pool.query(
     `DELETE FROM reminders WHERE inbox_id = $1 AND sent = FALSE`,
@@ -94,10 +86,8 @@ export async function cancelAllRemindersForInbox(inboxId: string): Promise<numbe
   return result.rowCount || 0;
 }
 
-// 🟢 Get all due reminders (targetTime <= now)
 export async function getDueReminders(): Promise<Reminder[]> {
   const now = DateTime.now().toUTC().toISO();
-
   const result = await pool.query(
     `SELECT id, inbox_id, conversation_id,
             to_char(target_time, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS target_time,

@@ -23,6 +23,7 @@ import { connectDb } from './config/db.js';
 import { createUsersTable, incrementActionClick, incrementMessageCount } from './models/usersModel.js';
 import { createScheduleTable } from './models/scheduleModel.js';
 import { createReminderTable } from './models/reminderModel.js';
+import { checkGroupExists, createGroupsTable, incrementGroupMemberJoin, incrementGroupMemberLeave, incrementGroupMentionedMessage, incrementGroupMessage, insertGroupDetails } from "./models/groupsModel.js";
 
 console.log(`🚀 Starting DevConnect 2025 Concierge Agent (Agent SDK)`);
 
@@ -32,6 +33,7 @@ await connectDb();
 await createUsersTable();
 await createScheduleTable();
 await createReminderTable();
+await createGroupsTable();
 
 // Initialize AI agent
 const aiAgent = new AIAgent();
@@ -172,6 +174,21 @@ async function main() {
     console.log("  - Direct messages (DMs)");
     console.log(`  - Group messages when mentioned with @${MENTION_HANDLES.split(',')[0]}`);
     
+    agent.on('group-update', async (ctx) => {
+      const content = ctx.message.content as any;
+
+      if (content.addedInboxes?.length > 0) {
+        await incrementGroupMemberJoin(ctx.message.conversationId);
+        console.log(`New members added: ${JSON.stringify(content.addedInboxes)}`);
+      }
+
+      if (content.removedInboxes?.length > 0) {
+        await incrementGroupMemberLeave(ctx.message.conversationId);
+        console.log(`Members removed: ${JSON.stringify(content.removedInboxes)}`);
+      }
+
+    });
+
     // Handle text messages
     agent.on('text', async (ctx) => {
       try {
@@ -180,6 +197,25 @@ async function main() {
         const conversationId = ctx.conversation.id;
         const isGroup = ctx.isGroup(); // Use Agent SDK's isGroup() method
         ctx.sendReaction("👀");
+
+        // if the agent is added in the third party group, create a new group record
+        const exists = await checkGroupExists(conversationId);
+      
+        if (!exists) {
+          await insertGroupDetails({
+            groupId: conversationId,
+            groupName: ctx.conversation.name,
+            groupType: 'activity',
+            createdBy: await ctx.getSenderAddress(),
+            memberCount: (await ctx.conversation.members()).length,
+            description: `Activity group for ${ctx.conversation.name}`,
+            originalGroupId: conversationId,
+            totalMessages: 0,
+            totalMentionedMessages: 0,
+            totalLeaves: 0,
+            metadata: {},
+          });
+        };
 
         if (DEBUG_LOGS) {
           console.log(`📥 Received message:`, {
@@ -205,14 +241,15 @@ async function main() {
         // In groups: ONLY respond if mentioned
         // In DMs: Always respond
         if (isGroup && !isMentioned(messageContent)) {
+          await incrementGroupMessage(conversationId);
           if (DEBUG_LOGS) {
             console.log("⏭️ Not mentioned in group, skipping");
           }
           return; // Exit early - don't process or send reactions
         }
-
         // Clean mentions from group messages
         if (isGroup && isMentioned(messageContent)) {
+          await incrementGroupMentionedMessage(conversationId);
           cleanContent = removeMention(messageContent);
           if (DEBUG_LOGS) {
             console.log("👋 Mentioned in group, will respond");
@@ -240,9 +277,8 @@ async function main() {
           if (isGroup && isSidebarRequest(cleanContent)) {
             const groupName = parseSidebarCommand(cleanContent);
             if (groupName) {
-              console.log(`🎯 Processing sidebar group request: "${groupName}"`);
-              const sidebarResponse = await handleSidebarRequest(groupName, ctx.message, agent.client as any, ctx.conversation);
-              if (sidebarResponse && sidebarResponse.trim() !== "") {
+              const sidebarResponse = await handleSidebarRequest(groupName, ctx.message, agent.client as any, ctx.conversation, senderAddress);
+              if (sidebarResponse && sidebarResponse.trim() !== "") {                 
                 await ctx.sendText(sidebarResponse);
               }
               return;
