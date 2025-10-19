@@ -1046,6 +1046,26 @@ Is there anything else I can help with?`,
           break;
           
         default:
+          // Handle sidebar group actions with dynamic IDs
+          const agentId = ctx.client.inboxId.slice(0, 8);
+          if (actionId.startsWith(`devconnect_827491_${agentId}_join_sidebar_`)) {
+            const groupId = actionId.replace(`devconnect_827491_${agentId}_join_sidebar_`, '');
+            console.log(`🎯 User joining sidebar group: ${groupId}`);
+            const { joinSidebarGroup } = await import("./services/agent/tools/sidebarGroups.js");
+            const joinResult = await joinSidebarGroup(groupId, ctx.message.senderInboxId);
+            await ctx.sendText(joinResult);
+            break;
+          }
+          
+          if (actionId.startsWith(`devconnect_827491_${agentId}_decline_sidebar_`)) {
+            const groupId = actionId.replace(`devconnect_827491_${agentId}_decline_sidebar_`, '');
+            console.log(`🎯 User declining sidebar group: ${groupId}`);
+            const { declineSidebarGroup } = await import("./services/agent/tools/sidebarGroups.js");
+            const declineResult = await declineSidebarGroup(groupId, ctx.message.senderInboxId);
+            await ctx.sendText(declineResult);
+            break;
+          }
+          
           await ctx.sendText("Thanks for your selection!");
       }
     });
