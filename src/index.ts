@@ -178,13 +178,11 @@ async function handleMessage(message: DecodedMessage, client: Client) {
 
     // Get sender address for context
     let senderAddress = "";
-    if (SHOW_SENDER_ADDRESS) {
-      try {
-        // Use the sender's inbox ID to get their address
-        senderAddress = senderInboxId;
-      } catch (error) {
-        console.warn("⚠️ Could not get sender address:", error);
-      }
+    try {
+      // Always get sender address for functions that need it (like handleSidebarRequest)
+      senderAddress = senderInboxId;
+    } catch (error) {
+      console.warn("⚠️ Could not get sender address:", error);
     }
 
     // Send thinking reaction while processing
@@ -207,7 +205,7 @@ async function handleMessage(message: DecodedMessage, client: Client) {
         console.log(`🔍 Parsed group name: "${groupName}"`);
         if (groupName) {
           console.log(`🎯 Processing sidebar group request: "${groupName}"`);
-          const sidebarResponse = await handleSidebarRequest(groupName, message, client, conversation);
+          const sidebarResponse = await handleSidebarRequest(groupName, message, client, conversation, senderAddress);
           if (sidebarResponse && sidebarResponse.trim() !== "") {
             await conversation.send(sidebarResponse);
           }
