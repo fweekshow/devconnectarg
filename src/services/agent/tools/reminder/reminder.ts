@@ -10,7 +10,7 @@ import {
   listAllPendingForInbox,
 } from "@/models/reminderModel.js";
 import { Reminder } from "@/models/types.js";
-import { incrementRemindersCreated } from "@/models/usersModel";
+import { incrementRemindersCreated } from "@/models/usersModel.js";
 
 
 export const fetchAllPendingReminders = tool(
