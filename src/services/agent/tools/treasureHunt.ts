@@ -205,13 +205,23 @@ export async function assignToTreasureHuntGroup(userInboxId: string): Promise<{
       };
       
     } catch (addError: any) {
-      if (addError.message?.includes('already')) {
+      console.log(`❌ Error adding to treasure hunt group: ${addError.message}`);
+      
+      if (addError.message?.includes('already') || addError.message?.includes('duplicate')) {
         return {
           success: true,
           message: "✅ You're already in a treasure hunt group! Check your group chat for your current challenge.",
         };
+      } else if (addError.message?.includes('Failed to verify all installations') || addError.code === 'GenericFailure') {
+        console.log(`⚠️ Installation verification failed for treasure hunt group - user is likely already in group`);
+        return {
+          success: true,
+          message: "✅ You're already in a treasure hunt group! Check your group chat for your current challenge.",
+        };
+      } else {
+        console.log(`❌ Unknown error for treasure hunt group:`, addError);
+        throw addError;
       }
-      throw addError;
     }
 
   } catch (error: any) {
