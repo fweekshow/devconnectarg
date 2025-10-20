@@ -28,10 +28,10 @@ export const TREASURE_HUNT_CONFIG = {
 export const TREASURE_HUNT_TASKS = [
   {
     index: 0,
-    title: "Find a Spoon",
-    description: "Take a photo of a spoon",
-    validationPrompt: "Does this image clearly show a spoon? Respond with YES or NO.",
-    hint: "Kitchen drawer!",
+    title: "The Dog Walker Riddle",
+    description: "In this city, some walk for two and some for twenty. Find the one whose hands are full of leashes.",
+    validationPrompt: "Does this image show a person walking multiple dogs with leashes? Look for someone walking several dogs at once.",
+    hint: "Look for someone managing multiple furry friends on leads!",
     points: 10,
   },
   {
