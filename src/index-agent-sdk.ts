@@ -220,7 +220,6 @@ async function main() {
         const senderInboxId = ctx.message.senderInboxId;
         const conversationId = ctx.conversation.id;
         const isGroup = ctx.isGroup(); // Use Agent SDK's isGroup() method
-        ctx.sendReaction("👀");
 
         // if the agent is added in the third party group, create a new group record
         const exists = await checkGroupExists(conversationId);
@@ -273,12 +272,14 @@ async function main() {
         }
         // Clean mentions from group messages
         if (isGroup && isMentioned(messageContent)) {
+          ctx.sendReaction("👀");
           await incrementGroupMentionedMessage(conversationId);
           cleanContent = removeMention(messageContent);
           if (DEBUG_LOGS) {
             console.log("👋 Mentioned in group, will respond");
           }
         } else if (!isGroup) {
+          ctx.sendReaction("👀");
           if (DEBUG_LOGS) {
             console.log("💬 DM received, will respond");
           }
