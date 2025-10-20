@@ -415,13 +415,18 @@ export function generateGroupSelectionQuickActions() {
         style: "primary" as const
       },
       {
-        id: "join_staking_summit",
-        label: "⛰️ Staking Summit",
+        id: "join_topic_group_creators",
+        label: "🎨 Creators @ DevConnect",
         style: "primary" as const
       },
       {
-        id: "join_builder_nights",
-        label: "🔨 Builder Nights Buenos Aires",
+        id: "join_topic_group_social",
+        label: "🎉 Side Events @ DevConnect",
+        style: "primary" as const
+      },
+      {
+        id: "join_topic_group_vc",
+        label: "🚀 Startups @ DevConnect",
         style: "primary" as const
       },
     ]

@@ -5,6 +5,7 @@ import { AIAgent } from "./services/agent/index.js";
 import { setBroadcastClient } from "./services/agent/tools/broadcast.js";
 import { setGroupClient } from "./services/agent/tools/activityGroups.js";
 import { setTreasureHuntClient } from "./services/agent/tools/treasureHunt.js";
+import { detectRelevantGroup, generateTopicGroupJoinActions, joinTopicGroup, setDynamicGroupClient, TOPIC_GROUPS } from "./services/agent/tools/dynamicGroups.js";
 import { 
   handleSidebarRequest, 
   joinSidebarGroup, 
@@ -170,6 +171,7 @@ async function main() {
     setGroupClient(agent.client);
     setSidebarClient(agent.client);
     setTreasureHuntClient(agent.client);
+    setDynamicGroupClient(agent.client);
     
     // Initialize agent in activity groups
     const { initializeAgentInGroups, listAllAgentGroups } = await import("./services/agent/tools/activityGroups.js");
@@ -401,6 +403,11 @@ async function main() {
             console.log(`🤖 Agent Response: "${response}"`);
             console.log(`🔍 Response length: ${response.length} chars`);
             
+            // FIRST: Check if there's a relevant group to suggest based on the user's query
+            // This needs to happen before generic greeting detection to avoid false positives
+            console.log(`🔍 Checking for relevant group suggestions...`);
+            const relevantTopic = await detectRelevantGroup(cleanContent, response);
+            
             // Check if AI is responding to a greeting or giving a generic "how can I help" response
             const lowerResponse = response.toLowerCase();
             const hasSchedule = response.includes("Schedule");
@@ -408,7 +415,8 @@ async function main() {
             const hasLogistics = response.includes("Event Logistics");
             
             // Detect generic greeting responses that should use ShowMenu tool instead
-            const isGenericGreeting = (
+            // BUT only if no relevant topic was detected (to avoid interfering with group suggestions)
+            const isGenericGreeting = !relevantTopic && (
               (lowerResponse.includes("how can i assist") || 
                lowerResponse.includes("how can i help") ||
                lowerResponse.includes("what can i help") ||
@@ -416,9 +424,10 @@ async function main() {
               response.length < 250 // Short generic response
             );
             
-            console.log(`🔍 Menu detection - Schedule: ${hasSchedule}, Wifi: ${hasWifi}, Logistics: ${hasLogistics}, GenericGreeting: ${isGenericGreeting}`);
+            console.log(`🔍 Menu detection - Schedule: ${hasSchedule}, Wifi: ${hasWifi}, Logistics: ${hasLogistics}, GenericGreeting: ${isGenericGreeting}, RelevantTopic: ${relevantTopic}`);
             
-            const isListingMenu = (hasSchedule && hasWifi && hasLogistics) || isGenericGreeting;
+            // Don't show menu if we have a relevant topic to suggest
+            const isListingMenu = (hasSchedule && hasWifi && hasLogistics) || (isGenericGreeting && !relevantTopic);
             
             if (isListingMenu) {
               console.warn("⚠️ AI tried to list menu in text instead of using ShowMenu tool!");
@@ -468,30 +477,60 @@ async function main() {
                 await ctx.sendText("Hi! I'm the DevConnect 2025 Concierge. I can help you with the Schedule, Set Reminders, Event Info, Join Groups, and Sponsored Slot information. What would you like to know?");
               }
             } else {
-              // Regular text response with follow-up actions
-              const followupActionsContent: ActionsContent = {
-                id: "response_followup_actions",
-                description: `${response}
+              // Use the relevantTopic we already detected above
+              
+              // Check if AI response already mentions joining a specific group
+              const responseLower = response.toLowerCase();
+              const mentionsGroupJoin = responseLower.includes('join') && 
+                responseLower.includes('group');
+              
+              console.log(`🔍 AI mentions group join: ${mentionsGroupJoin}, RelevantTopic: ${relevantTopic}`);
+              
+              let followupActionsContent: ActionsContent;
+              
+              if (relevantTopic) {
+                console.log(`✅ Found relevant topic: ${relevantTopic}`);
+                // Show topic-specific group join actions instead of generic "anything else"
+                const topicActions = generateTopicGroupJoinActions(relevantTopic);
+                followupActionsContent = {
+                  id: topicActions.id,
+                  description: `${response}
+
+${topicActions.description}`,
+                  actions: topicActions.actions
+                };
+              } else if (mentionsGroupJoin && !relevantTopic) {
+                // AI mentioned joining a group but dynamic detection failed - show just the response
+                console.log(`⚠️ AI mentioned group but no topic detected - sending plain response to avoid confusion`);
+                await ctx.sendText(response);
+                addToConversationHistory(senderInboxId, cleanContent, response);
+                return; // Exit early to avoid sending confusing follow-up actions
+              } else {
+                // Show generic "anything else" follow-up actions
+                followupActionsContent = {
+                  id: "response_followup_actions",
+                  description: `${response}
 
 Is there anything else I can help with?`,
-                actions: [
-                  {
-                    id: "show_main_menu",
-                    label: "✅ Yes",
-                    style: "primary"
-                  },
-                  {
-                    id: "end_conversation",
-                    label: "❌ No",
-                    style: "secondary"
-                  }
-                ]
-              };
+                  actions: [
+                    {
+                      id: "show_main_menu",
+                      label: "✅ Yes",
+                      style: "primary"
+                    },
+                    {
+                      id: "end_conversation",
+                      label: "❌ No",
+                      style: "secondary"
+                    }
+                  ]
+                };
+              }
               
               const followupConversation = await ctx.client.conversations.getConversationById(conversationId);
               if (followupConversation) {
                 await (followupConversation as any).send(followupActionsContent, ContentTypeActions);
-                console.log(`✅ Sent response with follow-up actions`);
+                console.log(`✅ Sent response with ${relevantTopic ? 'topic-specific' : 'generic'} follow-up actions`);
               }
               
               addToConversationHistory(senderInboxId, cleanContent, response);
@@ -1045,8 +1084,46 @@ Is there anything else I can help with?`,
         case "end_conversation":
           await ctx.sendText("Great! Message me 👋 if you want to view the option menu again!");
           break;
-          
+
         default:
+          // Handle dynamic topic group join actions
+          if (actionId.startsWith("join_topic_group_")) {
+            const topic = actionId.replace("join_topic_group_", "") as keyof typeof TOPIC_GROUPS;
+            console.log(`🎯 User joining topic group: ${topic}`);
+            
+            try {
+              const joinResult = await joinTopicGroup(topic, ctx.message.senderInboxId, ctx.client);
+              
+              const topicGroupFollowupActionsContent: ActionsContent = {
+                id: `${topic}_group_join_followup`,
+                description: `${joinResult}
+
+Is there anything else I can help with?`,
+                actions: [
+                  {
+                    id: "show_main_menu",
+                    label: "✅ Yes",
+                    style: "primary"
+                  },
+                  {
+                    id: "end_conversation",
+                    label: "❌ No",
+                    style: "secondary"
+                  }
+                ]
+              };
+              
+              const topicConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
+              if (topicConversation) {
+                await topicConversation.send(topicGroupFollowupActionsContent, ContentTypeActions);
+              }
+            } catch (error) {
+              console.error(`❌ Error joining topic group ${topic}:`, error);
+              await ctx.sendText("Sorry, there was an error joining that group. Please try again later.");
+            }
+            break;
+          }
+          
           // Handle sidebar group actions with dynamic IDs
           const agentId = ctx.client.inboxId.slice(0, 8);
           if (actionId.startsWith(`devconnect_827491_${agentId}_join_sidebar_`)) {
