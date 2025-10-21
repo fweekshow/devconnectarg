@@ -36,6 +36,7 @@ import { createUsersTable, incrementActionClick, incrementMessageCount } from '.
 import { createScheduleTable } from './models/scheduleModel.js';
 import { createReminderTable } from './models/reminderModel.js';
 import { checkGroupExists, createGroupsTable, incrementGroupMemberJoin, incrementGroupMemberLeave, incrementGroupMentionedMessage, incrementGroupMessage, insertGroupDetails } from "./models/groupsModel.js";
+import { createTreasureHuntTables } from './models/treasureHuntModel.js';
 
 console.log(`🚀 Starting DevConnect 2025 Concierge Agent (Agent SDK)`);
 
@@ -46,6 +47,7 @@ await createUsersTable();
 await createScheduleTable();
 await createReminderTable();
 await createGroupsTable();
+await createTreasureHuntTables();
 
 // Initialize AI agent
 const aiAgent = new AIAgent();
