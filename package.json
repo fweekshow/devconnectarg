@@ -19,6 +19,7 @@
     "revoke": "tsx --env-file .env src/services/scripts/revokeInstallations.ts",
     "start": "node dist/index-agent-sdk.js",
     "schedule": "tsx --env-file .env src/services/scripts/admin-schedule.ts",
+    "treasure-hunt": "tsx --env-file .env src/services/scripts/admin-treasure-hunt.ts",
     "analytics": "node analytics.js",
     "analytics-cli": "node cli-analytics.js",
     "analytics-railway": "node railway-analytics.js",

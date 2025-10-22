@@ -9,6 +9,18 @@ import {
 } from "@xmtp/content-type-remote-attachment";
 import OpenAI from "openai";
 
+// Import treasure hunt data and functions from the model
+import { 
+  TREASURE_HUNT_CONFIG, 
+  TREASURE_HUNT_TASKS, 
+  TREASURE_HUNT_GROUP_IDS,
+  isTreasureHuntGroup,
+  assignToTreasureHuntGroup,
+  getUserTreasureHuntGroup,
+  recordTaskCompletion,
+  getTreasureHuntLeaderboard
+} from "../../models/treasureHunt.js";
+
 // Store the client reference for treasure hunt management
 let treasureHuntClient: Client<any> | null = null;
 
@@ -16,120 +28,16 @@ export function setTreasureHuntClient(client: Client<any>) {
   treasureHuntClient = client;
 }
 
-// TREASURE HUNT CONFIGURATION
-export const TREASURE_HUNT_CONFIG = {
-  totalGroups: 20,
-  totalTasks: 10,
-  maxMembersPerGroup: 10,
-  minConfidenceThreshold: 60, // 60% confidence required for validation
-};
+// TREASURE_HUNT_CONFIG is now imported from the model
 
-// Task definitions - 10 challenges for the treasure hunt
-export const TREASURE_HUNT_TASKS = [
-  {
-    index: 0,
-    title: "The Dog Walker Riddle",
-    description: "In this city, some walk for two and some for twenty. Find the one whose hands are full of leashes.",
-    validationPrompt: "Does this image show a person walking multiple dogs with leashes? Look for someone walking several dogs at once.",
-    hint: "Look for someone managing multiple furry friends on leads!",
-    points: 10,
-  },
-  {
-    index: 1,
-    title: "Find a Fork",
-    description: "Take a photo of a fork",
-    validationPrompt: "Does this image clearly show a fork? Respond with YES or NO.",
-    hint: "Right next to the spoons!",
-    points: 10,
-  },
-  {
-    index: 2,
-    title: "Find a Cup",
-    description: "Take a photo of a cup or mug",
-    validationPrompt: "Is this a photo of a cup, mug, or drinking vessel? Respond with YES or NO.",
-    hint: "Kitchen cupboard!",
-    points: 10,
-  },
-  {
-    index: 3,
-    title: "Find a Pen",
-    description: "Take a photo of a pen or pencil",
-    validationPrompt: "Does this image show a pen or pencil? Respond with YES or NO.",
-    hint: "Check your desk!",
-    points: 10,
-  },
-  {
-    index: 4,
-    title: "Find a Book",
-    description: "Take a photo of a book",
-    validationPrompt: "Is this a photo showing a book? Respond with YES or NO.",
-    hint: "Bookshelf or nightstand!",
-    points: 10,
-  },
-  {
-    index: 5,
-    title: "Find a Shoe",
-    description: "Take a photo of a shoe",
-    validationPrompt: "Does this image show a shoe or sneaker? Respond with YES or NO.",
-    hint: "By the door!",
-    points: 10,
-  },
-  {
-    index: 6,
-    title: "Find a Pillow",
-    description: "Take a photo of a pillow",
-    validationPrompt: "Is this a photo of a pillow or cushion? Respond with YES or NO.",
-    hint: "Bedroom or couch!",
-    points: 10,
-  },
-  {
-    index: 7,
-    title: "Find a Towel",
-    description: "Take a photo of a towel",
-    validationPrompt: "Does this image show a towel? Respond with YES or NO.",
-    hint: "Bathroom or kitchen!",
-    points: 10,
-  },
-  {
-    index: 8,
-    title: "Find a Bottle",
-    description: "Take a photo of any bottle",
-    validationPrompt: "Does this image show a bottle? Respond with YES or NO.",
-    hint: "Water bottle, shampoo, anything!",
-    points: 10,
-  },
-  {
-    index: 9,
-    title: "Find a Phone Charger",
-    description: "Take a photo of a phone charger",
-    validationPrompt: "Is this a photo of a phone charger or charging cable? Respond with YES or NO.",
-    hint: "Probably next to you right now! 📱",
-    points: 20,
-  },
-];
+// TREASURE_HUNT_TASKS is now imported from the model
 
-// Treasure hunt group IDs (to be filled in after creating groups)
-export const TREASURE_HUNT_GROUP_IDS: string[] = [
-  // Test group
-  "8b2d7fa9abf1190436f59131c6e2ec90",
-  // Remaining 19 groups to be added
-  // "group_id_2",
-  // "group_id_3",
-  // ... up to 20
-];
+// TREASURE_HUNT_GROUP_IDS and isTreasureHuntGroup are now imported from the model
 
-/**
- * Check if a group is a treasure hunt group
- */
-export function isTreasureHuntGroup(groupId: string): boolean {
-  return TREASURE_HUNT_GROUP_IDS.includes(groupId);
-}
+// assignToTreasureHuntGroup is now imported from the model
 
-/**
- * Assign user to a treasure hunt group
- * Finds the least-full group and adds the user
- */
-export async function assignToTreasureHuntGroup(userInboxId: string): Promise<{
+// This is a tools-specific version that handles XMTP client operations
+export async function assignToTreasureHuntGroupWithClient(userInboxId: string): Promise<{
   success: boolean;
   groupId?: string;
   groupNumber?: number;
@@ -378,14 +286,7 @@ export async function isGroupComplete(groupId: string): Promise<boolean> {
 /**
  * Get leaderboard/progress stats
  */
-export async function getTreasureHuntLeaderboard(): Promise<any[]> {
-  try {
-    // TODO: Query groups ordered by completion_time or tasks_completed
-    return [];
-  } catch (error) {
-    return [];
-  }
-}
+// getTreasureHuntLeaderboard is now imported from the model
 
 /**
  * Download and decrypt a remote attachment from XMTP
