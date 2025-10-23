@@ -36,11 +36,11 @@ const clankingStates = new Map<string, ClankingState>();
 const BANKR_INBOX_ID = "062b31e55329b63c5eb6889e89893ac40a5680e97b2bd2444ae98cb0af72fa9b";
 
 // Clanker API configuration
-const CLANKER_API_KEY = "rocky-bon2i-0svuh0wouh-infgjbk";
+const CLANKER_API_KEY = process.env.CLANKER_API_KEY || "";
 const CLANKER_API_BASE = "https://www.clanker.world/api";
 
 // Rocky's wallet address for rewards (20% allocation)
-const ROCKY_WALLET_ADDRESS = "0x6CBA9857c1593927800575dBD7d61ddf0A048DEA";
+const ROCKY_WALLET_ADDRESS = process.env.ROCKY_WALLET_ADDRESS || "";
 
 let clankingClient: Client<any> | null = null;
 
