@@ -1,9 +1,9 @@
 import { Client } from "@xmtp/node-sdk";
-import { createSigner, getDbPath, getEncryptionKeyFromHex } from "../helpers/client.js";
 
-const WALLET_KEY = process.env.XMTP_WALLET_KEY || process.env.WALLET_KEY;
-const DB_ENCRYPTION_KEY = process.env.XMTP_DB_ENCRYPTION_KEY || process.env.DB_ENCRYPTION_KEY;
-const XMTP_ENV = process.env.XMTP_ENV;
+import { CryptoUtils, XMTPClient } from "@/services/xmtp-client";
+import { ENV } from "@/config";
+
+const {WALLET_KEY, DB_ENCRYPTION_KEY, XMTP_ENV} = ENV;
 
 if (!WALLET_KEY) {
   throw new Error("WALLET_KEY or XMTP_WALLET_KEY is required");
@@ -20,9 +20,9 @@ if (!XMTP_ENV) {
 async function main() {
   console.log("🔄 Revoking old installations...");
   
-  const signer = createSigner(WALLET_KEY!);
-  const encryptionKey = getEncryptionKeyFromHex(DB_ENCRYPTION_KEY!);
-  const dbPath = getDbPath("devconnect-agent");
+  const signer = XMTPClient.createSigner(WALLET_KEY!);
+  const encryptionKey = CryptoUtils.getEncryptionKeyFromHex(DB_ENCRYPTION_KEY!);
+  const dbPath = XMTPClient.getDbPath("devconnect-agent");
 
   const client = await Client.create(signer, {
     dbEncryptionKey: encryptionKey,

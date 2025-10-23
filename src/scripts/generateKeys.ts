@@ -1,7 +1,8 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { generateEncryptionKeyHex } from "@/services/helpers/client.js";
+// import { generateEncryptionKeyHex } from "@/services/helpers/client.js";
+import { CryptoUtils } from "@/services/xmtp-client";
 
 // Check Node.js version
 const nodeVersion = process.versions.node;
@@ -15,7 +16,7 @@ console.log("Generating keys for example...");
 
 const walletKey = generatePrivateKey();
 const account = privateKeyToAccount(walletKey);
-const encryptionKeyHex = generateEncryptionKeyHex();
+const encryptionKeyHex = CryptoUtils.generateEncryptionKeyHex();
 const publicKey = account.address;
 
 // Get the current working directory (should be the example directory)
