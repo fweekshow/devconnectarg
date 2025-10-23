@@ -13,10 +13,22 @@ export const ENV = {
   DATABASE_URL: requireEnv("DATABASE_URL", process.env.DATABASE_URL),
 
   // Wallet / Agent SDK
-  WALLET_KEY: process.env.XMTP_WALLET_KEY || process.env.WALLET_KEY,
-  DB_ENCRYPTION_KEY:
-    process.env.XMTP_DB_ENCRYPTION_KEY || process.env.DB_ENCRYPTION_KEY,
-  XMTP_ENV: process.env.XMTP_ENV,
+  WALLET_KEY: requireEnv(
+    "WALLET_KEY",
+    (process.env.XMTP_WALLET_KEY || process.env.WALLET_KEY)?.trim()
+  ),
+  DB_ENCRYPTION_KEY: requireEnv(
+    "DB_ENCRYPTION_KEY",
+    (
+      process.env.XMTP_DB_ENCRYPTION_KEY || process.env.DB_ENCRYPTION_KEY
+    )?.trim()
+  ),
+  XMTP_ENV: requireEnv("XMTP_ENV", process.env.XMTP_ENV?.trim()),
+  NETWORK_ID: requireEnv("NETWORK_ID", process.env.NETWORK_ID?.trim()),
+  TEST_WALLET: process.env.TEST_WALLET,
+
+  //DB Path
+  RAILWAY_VOLUME_MOUNT_PATH: process.env.RAILWAY_VOLUME_MOUNT_PATH,
 
   // OpenAI API Keys
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
