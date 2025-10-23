@@ -1,9 +1,3 @@
-import {
-  createSigner,
-  getEncryptionKeyFromHex,
-  logAgentDetails,
-  validateEnvironment,
-} from "../services/helpers/client.js";
 import { TransactionReferenceCodec } from "@xmtp/content-type-transaction-reference";
 import { WalletSendCallsCodec } from "@xmtp/content-type-wallet-send-calls";
 import { Client, type XmtpEnv } from "@xmtp/node-sdk";
@@ -19,14 +13,10 @@ import {
 import { ActionsCodec } from "./types/ActionsContent";
 import { IntentCodec, type IntentContent } from "./types/IntentContent";
 
-// Validate required environment variables
-const { WALLET_KEY, DB_ENCRYPTION_KEY, XMTP_ENV, NETWORK_ID } =
-  validateEnvironment([
-    "WALLET_KEY",
-    "DB_ENCRYPTION_KEY",
-    "XMTP_ENV",
-    "NETWORK_ID",
-  ]);
+import { CryptoUtils, XMTPClient } from "@/services/xmtp-client";
+import { ENV } from "@/config";
+
+const {WALLET_KEY, NETWORK_ID, DB_ENCRYPTION_KEY, XMTP_ENV} = ENV
 
 async function main() {
   // Initialize token handler
@@ -37,8 +27,8 @@ async function main() {
   );
 
   // Create XMTP client
-  const signer = createSigner(WALLET_KEY);
-  const dbEncryptionKey = getEncryptionKeyFromHex(DB_ENCRYPTION_KEY);
+  const signer = XMTPClient.createSigner(WALLET_KEY);
+  const dbEncryptionKey = CryptoUtils.getEncryptionKeyFromHex(DB_ENCRYPTION_KEY);
 
   const client = await Client.create(signer, {
     dbEncryptionKey,
@@ -55,7 +45,7 @@ async function main() {
   const identifier = await signer.getIdentifier();
   const agentAddress = identifier.identifier;
 
-  void logAgentDetails(client as Client);
+  void XMTPClient.logAgentDetails(client as Client);
 
   // Sync conversations
   console.log("🔄 Syncing conversations...");
