@@ -42,13 +42,13 @@ export class ScheduleAdapter {
       type = "other",
       category,
       speaker,
-      capacity,
+      capacity = 0,
       status = "scheduled",
       relevance = 0,
       registrationRequired = false,
       registrationUrl,
       tags,
-      metadata,
+      metadata = {},
     } = params;
 
     const result = await db.query(
