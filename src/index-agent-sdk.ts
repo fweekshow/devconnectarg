@@ -1045,6 +1045,79 @@ Is there anything else I can help with?`,
         case "end_conversation":
           await ctx.sendText("Great! Message me 👋 if you want to view the option menu again!");
           break;
+
+        // Broadcast confirmation handlers
+        case "broadcast_yes":
+          try {
+            const { confirmBroadcast } = await import("./services/agent/tools/broadcast.js");
+            const result = await confirmBroadcast(ctx.message.senderInboxId, ctx.conversation.id);
+            await ctx.sendText(result);
+            console.log(`✅ Broadcast confirmed and sent by ${ctx.message.senderInboxId}`);
+          } catch (error: any) {
+            await ctx.sendText(`❌ Broadcast confirmation failed: ${error.message}`);
+            console.error("❌ Broadcast confirmation error:", error);
+          }
+          break;
+
+        case "broadcast_no":
+          try {
+            const { cancelBroadcast } = await import("./services/agent/tools/broadcast.js");
+            const result = await cancelBroadcast(ctx.message.senderInboxId);
+            await ctx.sendText(result);
+            console.log(`🚫 Broadcast cancelled by ${ctx.message.senderInboxId}`);
+          } catch (error: any) {
+            await ctx.sendText(`❌ Broadcast cancellation failed: ${error.message}`);
+            console.error("❌ Broadcast cancellation error:", error);
+          }
+          break;
+
+        case "broadcast_actions_yes":
+          try {
+            const { confirmBroadcastActions } = await import("./services/agent/tools/broadcast.js");
+            const result = await confirmBroadcastActions(ctx.message.senderInboxId, ctx.conversation.id);
+            await ctx.sendText(result);
+            console.log(`✅ Broadcast with actions confirmed and sent by ${ctx.message.senderInboxId}`);
+          } catch (error: any) {
+            await ctx.sendText(`❌ Broadcast with actions confirmation failed: ${error.message}`);
+            console.error("❌ Broadcast with actions confirmation error:", error);
+          }
+          break;
+
+        case "broadcast_actions_no":
+          try {
+            const { cancelBroadcast } = await import("./services/agent/tools/broadcast.js");
+            const result = await cancelBroadcast(ctx.message.senderInboxId);
+            await ctx.sendText(result);
+            console.log(`🚫 Broadcast with actions cancelled by ${ctx.message.senderInboxId}`);
+          } catch (error: any) {
+            await ctx.sendText(`❌ Broadcast with actions cancellation failed: ${error.message}`);
+            console.error("❌ Broadcast with actions cancellation error:", error);
+          }
+          break;
+
+        case "broadcast_join_yes":
+          try {
+            const { confirmBroadcastJoin } = await import("./services/agent/tools/broadcast.js");
+            const result = await confirmBroadcastJoin(ctx.message.senderInboxId, ctx.conversation.id);
+            await ctx.sendText(result);
+            console.log(`✅ Broadcast with join instruction confirmed and sent by ${ctx.message.senderInboxId}`);
+          } catch (error: any) {
+            await ctx.sendText(`❌ Broadcast with join instruction confirmation failed: ${error.message}`);
+            console.error("❌ Broadcast with join instruction confirmation error:", error);
+          }
+          break;
+
+        case "broadcast_join_no":
+          try {
+            const { cancelBroadcast } = await import("./services/agent/tools/broadcast.js");
+            const result = await cancelBroadcast(ctx.message.senderInboxId);
+            await ctx.sendText(result);
+            console.log(`🚫 Broadcast with join instruction cancelled by ${ctx.message.senderInboxId}`);
+          } catch (error: any) {
+            await ctx.sendText(`❌ Broadcast with join instruction cancellation failed: ${error.message}`);
+            console.error("❌ Broadcast with join instruction cancellation error:", error);
+          }
+          break;
           
         default:
           // Handle sidebar group actions with dynamic IDs

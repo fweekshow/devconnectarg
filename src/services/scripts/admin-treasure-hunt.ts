@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
 import { DateTime } from "luxon";
-import pool from "../../config/db.js";
+import pool, { connectDb } from "../../config/db.js";
 import { 
   TREASURE_HUNT_CONFIG, 
   TREASURE_HUNT_TASKS, 
@@ -42,6 +42,9 @@ async function createTreasureHuntTables() {
 async function initializeTreasureHunt() {
   try {
     console.log("Starting Treasure Hunt Setup...");
+    await connectDb();
+    console.log("🔍 Database URL:", process.env.DATABASE_URL ? `${process.env.DATABASE_URL.substring(0, 50)}...` : "NOT SET");
+    console.log("🔍 NODE_ENV:", process.env.NODE_ENV);
     
     // Create tables first
     console.log("Creating treasure hunt tables...");
@@ -76,6 +79,11 @@ async function initializeTreasureHunt() {
     }
     
     // Groups will be added later when needed
+    
+    // Verify what's actually in the database
+    console.log("\n🔍 Verifying database contents...");
+    const verifyResult = await pool.query("SELECT id, task_index, title FROM treasure_hunt_tasks ORDER BY task_index");
+    console.log("📊 Tasks in database:", verifyResult.rows);
     
     console.log("\n✅ Treasure hunt setup completed successfully!");
     
