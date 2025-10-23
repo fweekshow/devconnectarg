@@ -1,6 +1,3 @@
-#!/usr/bin/env tsx
-
-import { DateTime } from "luxon";
 import { 
   insertSchedule, 
   createScheduleTable,
