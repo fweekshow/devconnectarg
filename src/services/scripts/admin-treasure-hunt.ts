@@ -5,7 +5,6 @@ import pool from "../../config/db.js";
 import { 
   TREASURE_HUNT_CONFIG, 
   TREASURE_HUNT_TASKS, 
-  TREASURE_HUNT_GROUP_IDS 
 } from "../../models/treasureHunt.js";
 
 async function createTreasureHuntTables() {
@@ -16,34 +15,21 @@ async function createTreasureHuntTables() {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS treasure_hunt_tasks (
         id SERIAL PRIMARY KEY,
-        task_index INTEGER NOT NULL,
+        task_index INTEGER UNIQUE NOT NULL,
         title TEXT NOT NULL,
         description TEXT NOT NULL,
         validation_prompt TEXT NOT NULL,
         hint TEXT NOT NULL,
         points INTEGER NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW(),
-        UNIQUE(task_index)
+        created_at TIMESTAMP DEFAULT NOW()
       );
     `);
     
-    // Remove is_active column if it exists
-    try {
-      await pool.query(`ALTER TABLE treasure_hunt_tasks DROP COLUMN IF EXISTS is_active;`);
-      console.log("✅ Removed is_active column");
-    } catch (error) {
-      // Column might not exist, that's okay
-      console.log("ℹ️ is_active column not found (already removed)");
-    }
-    
-    // Ensure unique constraint on task_index exists
-    try {
-      await pool.query(`ALTER TABLE treasure_hunt_tasks ADD CONSTRAINT treasure_hunt_tasks_task_index_unique UNIQUE (task_index);`);
-      console.log("✅ Added unique constraint on task_index");
-    } catch (error) {
-      // Constraint might already exist, that's okay
-      console.log("ℹ️ Unique constraint on task_index already exists");
-    }
+    // Ensure uniqueness for ON CONFLICT (task_index)
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_treasure_hunt_tasks_task_index
+      ON treasure_hunt_tasks (task_index)
+    `);
     
     console.log("✅ treasure_hunt_tasks table ready!");
     

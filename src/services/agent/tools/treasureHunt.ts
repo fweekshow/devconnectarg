@@ -13,13 +13,8 @@ import OpenAI from "openai";
 import { 
   TREASURE_HUNT_CONFIG, 
   TREASURE_HUNT_TASKS, 
-  TREASURE_HUNT_GROUP_IDS,
-  isTreasureHuntGroup,
-  assignToTreasureHuntGroup,
-  getUserTreasureHuntGroup,
-  recordTaskCompletion,
-  getTreasureHuntLeaderboard
-} from "../../models/treasureHunt.js";
+  
+} from "../../../models/treasureHunt.js";
 
 // Store the client reference for treasure hunt management
 let treasureHuntClient: Client<any> | null = null;
@@ -58,7 +53,7 @@ export async function assignToTreasureHuntGroupWithClient(userInboxId: string): 
     // }
 
     // For now, assign to test group
-    const testGroupId = TREASURE_HUNT_GROUP_IDS[0];
+    const testGroupId = "1";
     
     if (!testGroupId) {
       return {
