@@ -1,27 +1,41 @@
 import { Pool } from "pg";
-import dotenv from "dotenv";
+import { ENV } from "./env.js";
 
-dotenv.config();
+class Database {
+  private static instance: Pool;
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL not found in .env file");
-}
+  static get pool(): Pool {
+    if (!Database.instance) {
+      Database.instance = new Pool({
+        connectionString: ENV.DATABASE_URL,
+        ssl:
+          ENV.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+      });
+    }
+    return Database.instance;
+  }
 
-// Create a connection pool using the DATABASE_URL
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
-});
+  static async connect(): Promise<void> {
+    try {
+      const client = await Database.pool.connect();
+      client.release();
+      console.log("Connected to PostgreSQL");
+    } catch (err) {
+      console.error("PostgreSQL connection error:", err);
+      throw err;
+    }
+  }
 
-export async function connectDb(): Promise<void> {
-  try {
-    const client = await pool.connect();
-    client.release();
-    console.log("Connected to PostgreSQL");
-  } catch (err) {
-    console.error("PostgreSQL Connection error:", err);
-    throw err;
+  static async close(): Promise<void> {
+    try {
+      await Database.pool.end();
+      console.log("PostgreSQL pool closed");
+    } catch (err) {
+      console.error("Error closing PostgreSQL pool:", err);
+    }
   }
 }
 
-export default pool;
+export const db = Database.pool;
+export const connectDb = Database.connect;
+export const closeDb = Database.close;
