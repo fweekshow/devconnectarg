@@ -1,0 +1,3 @@
+export const STAFF_WALLETS = [
+  "0x22209CFC1397832f32160239C902B10A624cAB1A".toLowerCase(), // Mateo
+];
