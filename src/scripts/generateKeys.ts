@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
-import { CryptoUtils } from "@/services/xmtp-client";
+import { CryptoUtils } from "@/services/xmtp/xmtp-client";
 
 // Check Node.js version
 const nodeVersion = process.versions.node;

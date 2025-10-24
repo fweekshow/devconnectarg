@@ -13,7 +13,7 @@ import {
 import { ActionsCodec } from "./types/ActionsContent";
 import { IntentCodec, type IntentContent } from "./types/IntentContent";
 
-import { CryptoUtils, XMTPClient } from "@/services/xmtp-client";
+import { CryptoUtils, XMTPClient } from "@/services/xmtp/xmtp-client";
 import { ENV } from "@/config";
 
 const {WALLET_KEY, NETWORK_ID, DB_ENCRYPTION_KEY, XMTP_ENV} = ENV
