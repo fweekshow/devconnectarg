@@ -1,5 +1,5 @@
 import { tool } from "@langchain/core/tools";
-import { BASECAMP_URL } from "@/constant.js";
+import { BASECAMP_URL } from "@/constants";
 
 export const fetchBasecampInfo = tool(
   () => {
