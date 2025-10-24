@@ -14,6 +14,14 @@ import {
   isSidebarRequest,
   setSidebarClient
 } from "./services/agent/tools/sidebarGroups.js";
+import { 
+  startClankingFlow, 
+  isInClankingFlow,
+  handleClankingResponse,
+  joinClankingGroup, 
+  declineClankingGroup,
+  setClankingClient
+} from "./services/agent/tools/clankingGroups.js";
 import {
   DEBUG_LOGS,
   MENTION_HANDLES,
@@ -170,6 +178,7 @@ async function main() {
     setBroadcastClient(agent.client);
     setGroupClient(agent.client);
     setSidebarClient(agent.client);
+    setClankingClient(agent.client);
     setTreasureHuntClient(agent.client);
     setDynamicGroupClient(agent.client);
     
@@ -359,6 +368,90 @@ async function main() {
             }
           }
           
+          // Check if user is in clanking flow (waiting for name + ticker + image)
+          if (!isGroup && isInClankingFlow(senderInboxId)) {
+            console.log(`🪙 User ${senderInboxId} is in clanking flow, processing response`);
+            
+            // Parse name and ticker from text content
+            // Support multiple formats:
+            // - "Name: XYZ\nTicker: ABC"
+            // - "**Name:** XYZ\n**Ticker:** ABC"
+            // - "Name XYZ\nTicker ABC"
+            // - Just two lines: "GroupName\nTICKER"
+            const lines = cleanContent.split('\n').map(l => l.trim()).filter(l => l);
+            
+            let groupName: string | null = null;
+            let ticker: string | null = null;
+            
+            // Try structured format first
+            const nameMatch = cleanContent.match(/\*?\*?Name:?\*?\*?\s*(.+?)(?:\n|$)/i);
+            const tickerMatch = cleanContent.match(/\*?\*?Ticker:?\*?\*?\s*(.+?)(?:\n|$)/i);
+            
+            if (nameMatch && tickerMatch) {
+              groupName = nameMatch[1].trim();
+              ticker = tickerMatch[1].trim().toUpperCase();
+            } else if (lines.length >= 2) {
+              // Fallback: first line is name, second line is ticker
+              groupName = lines[0];
+              ticker = lines[1].toUpperCase();
+            } else if (lines.length === 1) {
+              // Single line: use as both name and ticker
+              groupName = lines[0];
+              ticker = lines[0].substring(0, 5).toUpperCase().replace(/[^A-Z]/g, '') || "CLNK";
+            }
+            
+            console.log(`📝 Parsed - Name: "${groupName}", Ticker: "${ticker}"`);
+            
+            if (!groupName) {
+              await ctx.sendText("❌ Please provide a group name in the format:\n**Name:** Your Group Name\n**Ticker:** SYMBOL");
+              return;
+            }
+            
+            if (!ticker) {
+              await ctx.sendText("❌ Please provide a ticker symbol in the format:\n**Name:** Your Group Name\n**Ticker:** SYMBOL");
+              return;
+            }
+            
+            // Wait a moment for the image to arrive (XMTP sends text and attachments separately)
+            console.log(`⏳ Waiting for image attachment...`);
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+            
+            // Check for stored image from attachment handler
+            const clankingKey = `clanking:${senderInboxId}`;
+            const storedImage = pendingTreasureImages.get(clankingKey);
+            
+            let imageUrl: string | undefined;
+            if (storedImage) {
+              const attachment = storedImage.content as any;
+              if (attachment?.url) {
+                imageUrl = attachment.url;
+                console.log(`📷 Found stored image URL: ${imageUrl}`);
+                // Clean up the stored image
+                pendingTreasureImages.delete(clankingKey);
+              }
+            }
+            
+            if (!imageUrl) {
+              await ctx.sendText("❌ Please upload an image for your token logo. Make sure to attach the image before or with your group name.");
+              return;
+            }
+            
+            const clankingResponse = await handleClankingResponse(
+              groupName,
+              ticker,
+              imageUrl,
+              ctx.message,
+              agent.client as any,
+              ctx.conversation,
+              senderAddress
+            );
+            
+            if (clankingResponse && clankingResponse.trim() !== "") {                 
+              await ctx.sendText(clankingResponse);
+            }
+            return;
+          }
+          
           // Check for broadcast commands
           if (!isGroup && cleanContent.toLowerCase().startsWith("/broadcast ")) {
             const broadcastMessage = cleanContent.substring(11).trim();
@@ -445,7 +538,8 @@ async function main() {
                   // { id: "join_eth_group", label: "ETH Group", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760463829/Ethereum_Foundation_Logo_Vector_xddxiu.svg", style: "secondary" },
                   { id: "join_xmtp_group", label: "XMTP Group", imageUrl: "https://d392zik6ho62y0.cloudfront.net/images/xmtp-logo.png", style: "secondary" },
                   { id: "join_groups", label: "More Groups", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464996/vecteezy_join-group-icon-in-trendy-outline-style-isolated-on-white_32201148_mkmtik.jpg", style: "secondary" },
-                  { id: "treasure_hunt", label: "Treasure Hunt", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760561042/ChatGPT_Image_Oct_15_2025_at_05_43_44_PM_wwnxiq.png", style: "secondary" }
+                  { id: "treasure_hunt", label: "Treasure Hunt", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760561042/ChatGPT_Image_Oct_15_2025_at_05_43_44_PM_wwnxiq.png", style: "secondary" },
+                  { id: "clank_start", label: "Clank Chats", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1761242689/12e431339222c11eb7c3ecdb8d5439673bd643ecd34721c5aa3c4d06be083606_jmagsh.png", style: "primary" }
                 ]
               };
               
@@ -580,12 +674,27 @@ Is there anything else I can help with?`,
       // Check if this is from a treasure hunt group
       const isGroup = ctx.isGroup();
       const isTreasureGroup = isTreasureHuntGroup(ctx.conversation.id);
+      const isInClanking = isInClankingFlow(ctx.message.senderInboxId);
       
-      console.log(`🔍 Is group: ${isGroup}, Is treasure hunt: ${isTreasureGroup}, Group ID: ${ctx.conversation.id}`);
+      console.log(`🔍 Is group: ${isGroup}, Is treasure hunt: ${isTreasureGroup}, Is clanking: ${isInClanking}, Group ID: ${ctx.conversation.id}`);
+      
+      // Handle clanking flow attachments (DMs only)
+      if (!isGroup && isInClanking) {
+        console.log(`🪙 Clanking flow attachment detected`);
+        // Store this image for the clanking flow
+        const key = `clanking:${ctx.message.senderInboxId}`;
+        pendingTreasureImages.set(key, {
+          content: ctx.message.content,
+          messageId: ctx.message.id,
+          timestamp: Date.now()
+        });
+        console.log(`✅ Stored clanking image for user ${ctx.message.senderInboxId}`);
+        return;
+      }
       
       if (!isGroup || !isTreasureGroup) {
-        console.log(`⏭️ Not a treasure hunt group, skipping attachment`);
-        return; // Not a treasure hunt group
+        console.log(`⏭️ Not a treasure hunt group or clanking flow, skipping attachment`);
+        return; // Not a treasure hunt group or clanking flow
       }
       
       // Store this image in the Map for when the user mentions Rocky
@@ -728,6 +837,12 @@ Just ask naturally - I understand conversational requests!`;
                 label: "Treasure Hunt",
                 imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760561042/ChatGPT_Image_Oct_15_2025_at_05_43_44_PM_wwnxiq.png",
                 style: "secondary"
+              },
+              {
+                id: "clank_start",
+                label: "Clank Chats",
+                imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1761242689/12e431339222c11eb7c3ecdb8d5439673bd643ecd34721c5aa3c4d06be083606_jmagsh.png",
+                style: "primary"
               }
             ]
           };
@@ -1085,6 +1200,15 @@ Is there anything else I can help with?`,
           await ctx.sendText("Great! Message me 👋 if you want to view the option menu again!");
           break;
 
+        case "clank_start":
+          console.log(`🪙 User ${ctx.message.senderInboxId} clicked Clank button`);
+          const clankingMessage = await startClankingFlow(
+            ctx.message.senderInboxId,
+            ctx.conversation.id
+          );
+          await ctx.sendText(clankingMessage);
+          break;
+
         default:
           // Handle dynamic topic group join actions
           if (actionId.startsWith("join_topic_group_")) {
@@ -1140,6 +1264,25 @@ Is there anything else I can help with?`,
             console.log(`🎯 User declining sidebar group: ${groupId}`);
             const { declineSidebarGroup } = await import("./services/agent/tools/sidebarGroups.js");
             const declineResult = await declineSidebarGroup(groupId, ctx.message.senderInboxId);
+            await ctx.sendText(declineResult);
+            break;
+          }
+          
+          // Handle clanking group actions with dynamic IDs
+          if (actionId.startsWith(`devconnect_827491_${agentId}_join_clanking_`)) {
+            const groupId = actionId.replace(`devconnect_827491_${agentId}_join_clanking_`, '');
+            console.log(`🎯 User joining clanking group: ${groupId}`);
+            const { joinClankingGroup } = await import("./services/agent/tools/clankingGroups.js");
+            const joinResult = await joinClankingGroup(groupId, ctx.message.senderInboxId);
+            await ctx.sendText(joinResult);
+            break;
+          }
+          
+          if (actionId.startsWith(`devconnect_827491_${agentId}_decline_clanking_`)) {
+            const groupId = actionId.replace(`devconnect_827491_${agentId}_decline_clanking_`, '');
+            console.log(`🎯 User declining clanking group: ${groupId}`);
+            const { declineClankingGroup } = await import("./services/agent/tools/clankingGroups.js");
+            const declineResult = await declineClankingGroup(groupId, ctx.message.senderInboxId);
             await ctx.sendText(declineResult);
             break;
           }
