@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-// import { generateEncryptionKeyHex } from "@/services/helpers/client.js";
+
 import { CryptoUtils } from "@/services/xmtp-client";
 
 // Check Node.js version
