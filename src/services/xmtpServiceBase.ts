@@ -3,7 +3,6 @@ import { getName } from "@coinbase/onchainkit/identity";
 import type { Client } from "@xmtp/node-sdk";
 
 import { XMTPAgent } from "@/services/xmtp/xmtp-agent";
-import { formatWalletAddress } from "@/utils/address";
 import { STAFF_WALLETS } from "@/constants";
 
 export abstract class XMTPServiceBase {
@@ -39,7 +38,10 @@ export abstract class XMTPServiceBase {
   ): Promise<`0x${string}` | null> {
     const address = await this.getAddressFromInboxId(senderInboxId);
     if (!address) return null;
-    return formatWalletAddress(address);
+    const lower = address.toLowerCase();
+    return lower.startsWith("0x")
+      ? (lower as `0x${string}`)
+      : (`0x${lower}` as `0x${string}`);
   }
 
   protected async getSenderIdentifier(senderInboxId: string): Promise<string> {
