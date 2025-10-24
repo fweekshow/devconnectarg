@@ -1,34 +1,19 @@
-import type { Client } from "@xmtp/node-sdk";
 import { getName } from "@coinbase/onchainkit/identity";
 import { base } from "viem/chains";
 
 import type { ActionsContent } from "@/services/xmtp/xmtp-inline-actions/types";
 import { STAFF_WALLETS } from "@/constants";
+import { XMTPServiceBase } from "@/services/xmtpServiceBase";
 import { XMTPAgent } from "@/services/xmtp/xmtp-agent";
 import { formatWalletAddress } from "@/utils/address";
 import { PendingBroadcast } from "./interfaces";
 
-export class BrodcastService {
-  private client: Client<any>;
+export class BrodcastService extends XMTPServiceBase {
   private pendingBroadcasts = new Map<string, PendingBroadcast>();
   private broadcastTitle = "BASECAMP 2025";
 
   constructor(xmtpAgent: XMTPAgent) {
-    if (!xmtpAgent) {
-      throw new Error(
-        "XMTPAgent instance is required to initialize BroadcastService."
-      );
-    }
-    const client = xmtpAgent.getClient();
-    if (!client) {
-      throw new Error("XMTP client could not be initialized from XMTPAgent.");
-    }
-
-    this.client = client;
-
-    console.log(
-      "✅ BroadcastService initialized successfully with XMTP client."
-    );
+    super(xmtpAgent);
   }
 
   private async getAddressFromInboxId(senderInboxId: string): Promise<string> {
