@@ -28,3 +28,7 @@ export const ACTIVITY_GROUP_MAP = {
   staking_summit: "join_staking_summit",
   builder_nights: "join_builder_nights",
 } as const;
+
+export const BANKR_INBOX_ID = "062b31e55329b63c5eb6889e89893ac40a5680e97b2bd2444ae98cb0af72fa9b";
+
+export const DEFAULT_GROUP_MEMBER_COUNT = 3;
