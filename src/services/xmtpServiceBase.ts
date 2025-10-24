@@ -4,6 +4,7 @@ import type { Client } from "@xmtp/node-sdk";
 
 import { XMTPAgent } from "@/services/xmtp/xmtp-agent";
 import { formatWalletAddress } from "@/utils/address";
+import { STAFF_WALLETS } from "@/constants";
 
 export abstract class XMTPServiceBase {
   protected client: Client<any>;
@@ -77,6 +78,28 @@ export abstract class XMTPServiceBase {
     } catch (err) {
       console.error(`❌ Failed to get sender identifier:`, err);
       return `inbox-${senderInboxId.slice(0, 6)}...`;
+    }
+  }
+
+  protected async isAuthorizedMember(senderInboxId: string): Promise<boolean> {
+    try {
+      const formattedAddress = await this.getFormattedAddress(senderInboxId);
+      if (!formattedAddress) {
+        console.log(
+          "⚠️ Could not resolve wallet address from inbox ID for authorization"
+        );
+        return false;
+      }
+      const isAuthorized = STAFF_WALLETS.map((wallet) =>
+        wallet.toLowerCase()
+      ).includes(formattedAddress);
+      console.log(
+        `🔐 Checking permission for ${formattedAddress}: ${isAuthorized ? "ALLOWED" : "DENIED"}`
+      );
+      return isAuthorized;
+    } catch (err) {
+      console.error("❌ Error checking authorization:", err);
+      return false;
     }
   }
 }

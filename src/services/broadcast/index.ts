@@ -1,5 +1,4 @@
 import type { ActionsContent } from "@/services/xmtp/xmtp-inline-actions/types";
-import { STAFF_WALLETS } from "@/constants";
 import { XMTPServiceBase } from "@/services/xmtpServiceBase";
 import { XMTPAgent } from "@/services/xmtp/xmtp-agent";
 import { PendingBroadcast } from "./interfaces";
@@ -10,30 +9,6 @@ export class BrodcastService extends XMTPServiceBase {
 
   constructor(xmtpAgent: XMTPAgent) {
     super(xmtpAgent);
-  }
-
-  private async isAuthorizedBroadcaster(
-    senderInboxId: string
-  ): Promise<boolean> {
-    try {
-      const formattedAddress = await this.getFormattedAddress(senderInboxId);
-      if (!formattedAddress) {
-        console.log(
-          "⚠️ Could not resolve wallet address from inbox ID for authorization"
-        );
-        return false;
-      }
-      const isAuthorized = STAFF_WALLETS.map((wallet) =>
-        wallet.toLowerCase()
-      ).includes(formattedAddress);
-      console.log(
-        `🔐 Checking broadcast permission for ${formattedAddress}: ${isAuthorized ? "ALLOWED" : "DENIED"}`
-      );
-      return isAuthorized;
-    } catch (err) {
-      console.error("❌ Error checking broadcast authorization:", err);
-      return false;
-    }
   }
 
   private storePendingBroadcast(pending: PendingBroadcast) {
@@ -101,7 +76,7 @@ export class BrodcastService extends XMTPServiceBase {
       if (!message || message.trim().length === 0) {
         return "❌ Broadcast message cannot be empty. Use: /broadcast [your message]";
       }
-      if (!(await this.isAuthorizedBroadcaster(senderInboxId))) {
+      if (!(await this.isAuthorizedMember(senderInboxId))) {
         return "❌ Access denied. You are not authorized to send broadcast messages.";
       }
       const senderName = await this.getSenderIdentifier(senderInboxId);
@@ -205,7 +180,7 @@ export class BrodcastService extends XMTPServiceBase {
       if (!message || message.trim().length === 0) {
         return "❌ Broadcast message cannot be empty. Use: /broadcastactions [your message]";
       }
-      if (!(await this.isAuthorizedBroadcaster(senderInboxId))) {
+      if (!(await this.isAuthorizedMember(senderInboxId))) {
         return "❌ Access denied. You are not authorized to send broadcast messages.";
       }
       const senderName = await this.getSenderIdentifier(senderInboxId);
@@ -312,7 +287,7 @@ export class BrodcastService extends XMTPServiceBase {
       }
 
       // Check authorization
-      if (!(await this.isAuthorizedBroadcaster(senderInboxId))) {
+      if (!(await this.isAuthorizedMember(senderInboxId))) {
         return "❌ Access denied. You are not authorized to send broadcast messages.";
       }
 
@@ -428,7 +403,7 @@ export class BrodcastService extends XMTPServiceBase {
         `📋 Resolved inbox ID to wallet address: ${addressFromInboxId}`
       );
 
-      if (!(await this.isAuthorizedBroadcaster(senderInboxId))) {
+      if (!(await this.isAuthorizedMember(senderInboxId))) {
         return "❌ Access denied. You are not authorized to send broadcast messages.";
       }
 
