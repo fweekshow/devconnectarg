@@ -1,3 +1,4 @@
+export * from "./conversation";
 export * from "./event";
 export * from "./groups";
 export * from "./logistics";
