@@ -64,3 +64,12 @@ export const TREASURE_HUNT_TASKS = [
     points: 10,
   },
 ];
+
+export const TREASURE_HUNT_GROUP_IDS: string[] = [
+  // Test group
+  "8b2d7fa9abf1190436f59131c6e2ec90",
+  // Remaining 19 groups to be added
+  // "group_id_2",
+  // "group_id_3",
+  // ... up to 20
+];

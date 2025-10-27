@@ -1,106 +1,105 @@
-
 import {
   RemoteAttachmentCodec,
   type RemoteAttachment,
   type Attachment,
 } from "@xmtp/content-type-remote-attachment";
+import type { Client } from "@xmtp/node-sdk";
 import OpenAI from "openai";
 
-import { TREASURE_HUNT_CONFIG, TREASURE_HUNT_TASKS } from "@/constants";
+import {
+  TREASURE_HUNT_CONFIG,
+  TREASURE_HUNT_GROUP_IDS,
+  TREASURE_HUNT_TASKS,
+} from "@/constants";
 import { XMTPServiceBase } from "@/services/xmtpServiceBase";
-import { XMTPAgent } from "@/services/xmtp/xmtp-agent";
 import { ContentTypeActions } from "@/services/xmtp/xmtp-inline-actions/types";
 
 export class TreasureHuntService extends XMTPServiceBase {
-  constructor(xmtpAgent: XMTPAgent) {
-    super(xmtpAgent);
+  constructor(client: Client<any>) {
+    super(client);
   }
-
-  async assignToTreasureHuntGroupWithClient(userInboxId: string): Promise<{
+  isTreasureHuntGroup(groupId: string): boolean {
+    return TREASURE_HUNT_GROUP_IDS.includes(groupId);
+  }
+  async assignToTreasureHuntGroup(userInboxId: string): Promise<{
     success: boolean;
     groupId?: string;
     groupNumber?: number;
     message: string;
   }> {
-    try {
-      const testGroupId = "1";
-
-      if (!testGroupId) {
-        return {
-          success: false,
-          message: "🏴‍☠️ Treasure Hunt groups not yet created. Check back soon!",
-        };
-      }
-
-      try {
-        await this.client.conversations.sync();
-        const conversations = await this.client.conversations.list();
-        const group = conversations.find((c) => c.id === testGroupId);
-
-        if (!group) {
-          console.error(`❌ Test group ${testGroupId} not found`);
+    try {    
+        // TODO: Check database if user is already in a group
+        // const existingAssignment = await checkUserAssignment(userInboxId);
+        // if (existingAssignment) {
+        //   return { success: false, message: "You're already in a treasure hunt group!" };
+        // }
+    
+        // For now, assign to test group
+        const testGroupId = TREASURE_HUNT_GROUP_IDS[0];
+        
+        if (!testGroupId) {
           return {
             success: false,
-            message:
-              "❌ Treasure hunt group not accessible. Please contact support.",
+            message: "🏴‍☠️ Treasure Hunt groups not yet created. Check back soon!",
           };
         }
-
-        await (group as any).addMembers([userInboxId]);
-        console.log(`✅ Added user ${userInboxId} to treasure hunt test group`);
-
-        const currentTaskIndex = 0;
-        const completedTasks = 0;
-
-        const currentTask = TREASURE_HUNT_TASKS[currentTaskIndex];
-
-        setTimeout(async () => {
-          await this.sendCurrentTaskToGroup(testGroupId);
-        }, 2000);
-
-        const welcomeMessage =
-          currentTaskIndex === 0 && completedTasks === 0
+        
+        // Add user to the test group
+        try {
+          await this.client.conversations.sync();
+          const conversations = await this.client.conversations.list();
+          const group = conversations.find(c => c.id === testGroupId);
+          
+          if (!group) {
+            console.error(`❌ Test group ${testGroupId} not found`);
+            return {
+              success: false,
+              message: "❌ Treasure hunt group not accessible. Please contact support.",
+            };
+          }
+          
+          await (group as any).addMembers([userInboxId]);
+          console.log(`✅ Added user ${userInboxId} to treasure hunt test group`);
+          
+          // TODO: Get group's current progress from database
+          // const groupProgress = await getGroupProgress(testGroupId);
+          // const currentTaskIndex = groupProgress.current_task_index;
+          const currentTaskIndex = 0; // Placeholder
+          const completedTasks = 0; // Placeholder
+          
+          const currentTask = TREASURE_HUNT_TASKS[currentTaskIndex];
+          
+          // TODO: Record in database
+          // await recordParticipant(userInboxId, testGroupId);
+          
+          // Send the group's CURRENT task (not always task 1)
+          setTimeout(async () => {
+            await this.sendCurrentTaskToGroup(testGroupId);
+          }, 2000);
+          
+          // Contextual welcome message based on progress
+          const welcomeMessage = currentTaskIndex === 0 && completedTasks === 0
             ? "Welcome to the Base Hunt! You've been added to your team's group chat. Get ready to work together with your teammates as you dive into the adventure!"
-            : `Welcome to the Base Hunt! Your team is currently working on Task ${currentTaskIndex + 1}: ${currentTask.title}. Jump in and help them complete it!`;
-
-        return {
-          success: true,
-          groupId: testGroupId,
-          groupNumber: 1,
-          message: welcomeMessage,
-        };
-      } catch (addError: any) {
-        console.log(
-          `❌ Error adding to treasure hunt group: ${addError.message}`
-        );
-
-        if (
-          addError.message?.includes("already") ||
-          addError.message?.includes("duplicate")
-        ) {
+            : `Welcome to the Base Hunt! You've been added to your team's group chat. Your team is currently working on Task ${currentTaskIndex + 1}: ${currentTask.title}. Jump in and help them complete it!`;
+          
           return {
             success: true,
-            message:
-              "✅ You're already in a treasure hunt group! Check your group chat for your current challenge.",
+            groupId: testGroupId,
+            groupNumber: 1,
+            message: welcomeMessage,
           };
-        } else if (
-          addError.message?.includes("Failed to verify all installations") ||
-          addError.code === "GenericFailure"
-        ) {
-          console.log(
-            `⚠️ Installation verification failed for treasure hunt group - user is likely already in group`
-          );
-          return {
-            success: true,
-            message:
-              "✅ You're already in a treasure hunt group! Check your group chat for your current challenge.",
-          };
-        } else {
-          console.log(`❌ Unknown error for treasure hunt group:`, addError);
+          
+        } catch (addError: any) {
+          if (addError.message?.includes('already')) {
+            return {
+              success: true,
+              message: "✅ You're already in a treasure hunt group! Check your group chat for your current challenge.",
+            };
+          }
           throw addError;
         }
-      }
-    } catch (error: any) {
+    
+      }  catch (error: any) {
       console.error("❌ Error assigning to treasure hunt group:", error);
       return {
         success: false,
@@ -348,24 +347,24 @@ ${task.description}
 
   async sendCurrentTaskToGroup(groupId: string) {
     try {
-    
-    // TODO: Get current task index from database
-    const currentTaskIndex = 0; // Placeholder
-    
-    const taskAction = this.generateTaskSubmissionAction(currentTaskIndex);
-    if (!taskAction) {
-      console.error("❌ Failed to generate task action");
-      return;
+      // TODO: Get current task index from database
+      const currentTaskIndex = 0; // Placeholder
+
+      const taskAction = this.generateTaskSubmissionAction(currentTaskIndex);
+      if (!taskAction) {
+        console.error("❌ Failed to generate task action");
+        return;
+      }
+
+      const group =
+        await this.client.conversations.getConversationById(groupId);
+      if (group) {
+        await (group as any).send(taskAction, ContentTypeActions);
+        console.log(`✅ Sent task ${currentTaskIndex + 1} to group ${groupId}`);
+      }
+    } catch (error) {
+      console.error("❌ Error sending task to group:", error);
     }
-    
-    const group = await this.client.conversations.getConversationById(groupId);
-    if (group) {
-      await (group as any).send(taskAction, ContentTypeActions);
-      console.log(`✅ Sent task ${currentTaskIndex + 1} to group ${groupId}`);
-    }
-  } catch (error) {
-    console.error("❌ Error sending task to group:", error);
-  }
   }
 
   async getTreasureHuntStatus(groupId: string): Promise<string> {
