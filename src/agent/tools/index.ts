@@ -1,28 +1,26 @@
-import { fetchDevConnectInfo } from "./logistics.js";
-import { 
-  getFullSchedule,
-  getSpeakerInfo
-} from "./schedule.js";
-import { showMenu, showHelp } from "./welcome.js";
+import { fetchDevConnectInfo } from "./logistics";
 import {
   fetchAllPendingReminders,
   cancelPendingReminder,
   cancelAllReminders,
-  setReminder
-} from "./reminder/reminder.js";
-import { fetchCurrentDateTime } from "@/services/helpers/reminderHelper.js";
+  setReminder,
+  fetchCurrentDateTime,
+} from "./reminder";
+import { getFullSchedule, getSpeakerInfo } from "./schedule";
+import { showMenu, showHelp } from "./welcome";
+
 export const DEFAULT_TOOLS = [
   // Menu and help tools
   showMenu,
   showHelp,
-  
-  // Schedule tools  
+
+  // Schedule tools
   getFullSchedule,
   getSpeakerInfo,
-  
-  // Basecamp info
+
+  // Devconnect info
   fetchDevConnectInfo,
-  
+
   // Reminder tools
   fetchCurrentDateTime,
   setReminder,

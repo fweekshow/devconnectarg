@@ -1,14 +1,8 @@
 import type { Client } from "@xmtp/node-sdk";
-import { getDueReminders, markReminderSent } from "@/models/reminderModel.js";
 
-export interface ReminderDispatcher {
-  start(
-    client: Client<any>,
-  ): void;
-  stop(): void;
-}
+import { ReminderAdapter } from "@/adapters";
 
-class ReminderDispatcherImpl implements ReminderDispatcher {
+export class ReminderDispatcherImpl {
   private intervalId: NodeJS.Timeout | null = null;
   private client: Client<any> | null = null;
 
@@ -31,11 +25,11 @@ class ReminderDispatcherImpl implements ReminderDispatcher {
     if (!this.client) return;
 
     try {
-      const dueReminders = await getDueReminders();
+      const dueReminders = await ReminderAdapter.getDueReminders();
 
       for (const reminder of dueReminders) {
         await this.sendReminder(reminder);
-        await markReminderSent(reminder.id);
+        await ReminderAdapter.markReminderSent(reminder.id);
       }
     } catch (error) {
       console.error("Error processing due reminders:", error);
@@ -46,30 +40,25 @@ class ReminderDispatcherImpl implements ReminderDispatcher {
     if (!this.client) return;
 
     try {
-
       // Send reminder only to the specific conversation where it was requested
       // This fixes the privacy issue where reminders were sent to all user conversations
       const conversation = await this.client.conversations.getConversationById(
-        reminder.conversation_id,
+        reminder.conversation_id
       );
 
       if (conversation) {
         const reminderMessage = `⏰ Reminder: ${reminder.message}`;
         await conversation.send(reminderMessage);
         console.log(
-          `Sent reminder #${reminder.id} to conversation ${reminder.conversation_id}`,
+          `Sent reminder #${reminder.id} to conversation ${reminder.conversation_id}`
         );
       } else {
         console.error(
-          `Could not find conversation ${reminder.conversation_id} for reminder #${reminder.id}`,
+          `Could not find conversation ${reminder.conversation_id} for reminder #${reminder.id}`
         );
       }
     } catch (error) {
       console.error(`Failed to send reminder #${reminder.id}:`, error);
     }
   }
-}
-
-export function createReminderDispatcher(): ReminderDispatcher {
-  return new ReminderDispatcherImpl();
 }
