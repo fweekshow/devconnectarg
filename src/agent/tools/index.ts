@@ -1,4 +1,4 @@
-import { fetchBasecampInfo } from "./logistics.js";
+import { fetchDevConnectInfo } from "./logistics.js";
 import { 
   getFullSchedule,
   getSpeakerInfo
@@ -21,7 +21,7 @@ export const DEFAULT_TOOLS = [
   getSpeakerInfo,
   
   // Basecamp info
-  fetchBasecampInfo,
+  fetchDevConnectInfo,
   
   // Reminder tools
   fetchCurrentDateTime,
