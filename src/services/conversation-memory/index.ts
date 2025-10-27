@@ -1,9 +1,8 @@
+import { EXPIRY_MS, MAX_HISTORY } from "@/constants";
 import { ConversationEntry } from "./interfaces";
 
 export class ConversationMemoryService {
   private static conversationHistory = new Map<string, ConversationEntry[]>();
-  private static readonly MAX_HISTORY = 3; // Keep only last 3 exchanges
-  private static readonly EXPIRY_MS = 60 * 60 * 1000; // 1 hour
 
   static add(
     senderInboxId: string,
@@ -19,7 +18,7 @@ export class ConversationMemoryService {
     });
 
     // Keep only the last MAX_HISTORY exchanges
-    if (history.length > this.MAX_HISTORY) {
+    if (history.length > MAX_HISTORY) {
       history.shift();
     }
 
@@ -39,7 +38,7 @@ export class ConversationMemoryService {
   }
 
   static cleanup(): void {
-    const cutoff = new Date(Date.now() - this.EXPIRY_MS);
+    const cutoff = new Date(Date.now() - EXPIRY_MS);
 
     for (const [inboxId, history] of this.conversationHistory.entries()) {
       const recent = history.filter((entry) => entry.timestamp > cutoff);
