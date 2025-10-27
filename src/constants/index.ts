@@ -4,4 +4,5 @@ export * from "./logistics";
 export * from "./replies";
 export * from "./schedule";
 export * from "./staff";
+export * from "./treasureHunt";
 export * from "./urls";
