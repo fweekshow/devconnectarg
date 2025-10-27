@@ -1,25 +1,28 @@
-import { Agent } from '@xmtp/agent-sdk';
+import { Agent } from "@xmtp/agent-sdk";
 import { createReminderDispatcher } from "./services/agent/tools/reminder/dispatcher.js";
 import { isMentioned, removeMention } from "./mentions.js";
 import { AIAgent } from "./services/agent/index.js";
 import { setBroadcastClient } from "./services/agent/tools/broadcast.js";
 import { setGroupClient } from "./services/agent/tools/activityGroups.js";
 import { setTreasureHuntClient } from "./services/agent/tools/treasureHunt.js";
-import { 
-  handleSidebarRequest, 
-  joinSidebarGroup, 
+import {
+  handleSidebarRequest,
+  joinSidebarGroup,
   declineSidebarGroup,
   parseSidebarCommand,
   isSidebarRequest,
-  setSidebarClient
+  setSidebarClient,
 } from "./services/agent/tools/sidebarGroups.js";
+import { DEBUG_LOGS, MENTION_HANDLES, SHOW_SENDER_ADDRESS } from "./config.js";
 import {
-  DEBUG_LOGS,
-  MENTION_HANDLES,
-  SHOW_SENDER_ADDRESS,
-} from "./config.js";
-import { ActionsCodec, type ActionsContent, ContentTypeActions } from "./xmtp-inline-actions/types/ActionsContent.js";
-import { IntentCodec, ContentTypeIntent } from "./xmtp-inline-actions/types/IntentContent.js";
+  ActionsCodec,
+  type ActionsContent,
+  ContentTypeActions,
+} from "./xmtp-inline-actions/types/ActionsContent.js";
+import {
+  IntentCodec,
+  ContentTypeIntent,
+} from "./xmtp-inline-actions/types/IntentContent.js";
 import {
   ContentTypeReaction,
   ReactionCodec,
@@ -30,15 +33,27 @@ import {
   ContentTypeRemoteAttachment,
   ContentTypeAttachment,
 } from "@xmtp/content-type-remote-attachment";
-import { connectDb } from './config/db.js';
-import { createUsersTable, incrementActionClick, incrementMessageCount } from './models/usersModel.js';
-import { createScheduleTable } from './models/scheduleModel.js';
-import { createReminderTable } from './models/reminderModel.js';
-import { checkGroupExists, createGroupsTable, incrementGroupMemberJoin, incrementGroupMemberLeave, incrementGroupMentionedMessage, incrementGroupMessage, insertGroupDetails } from "./models/groupsModel.js";
+import { connectDb } from "./config/db.js";
+import {
+  createUsersTable,
+  incrementActionClick,
+  incrementMessageCount,
+} from "./models/usersModel.js";
+import { createScheduleTable } from "./models/scheduleModel.js";
+import { createReminderTable } from "./models/reminderModel.js";
+import {
+  checkGroupExists,
+  createGroupsTable,
+  incrementGroupMemberJoin,
+  incrementGroupMemberLeave,
+  incrementGroupMentionedMessage,
+  incrementGroupMessage,
+  insertGroupDetails,
+} from "./models/groupsModel.js";
 
 console.log(`🚀 Starting DevConnect 2025 Concierge Agent (Agent SDK)`);
 
-// Initialize database 
+// Initialize database
 await connectDb();
 // create users tables
 await createUsersTable();
@@ -62,49 +77,58 @@ const conversationHistory = new Map<string, ConversationEntry[]>();
 const validatedTreasureHuntImages = new Set<string>();
 
 // Store pending treasure hunt images (key: "groupId:userId")
-const pendingTreasureImages = new Map<string, { content: any; messageId: string; timestamp: number }>();
+const pendingTreasureImages = new Map<
+  string,
+  { content: any; messageId: string; timestamp: number }
+>();
 
 // Helper functions for conversation memory
-function addToConversationHistory(senderInboxId: string, userMessage: string, botResponse: string) {
+function addToConversationHistory(
+  senderInboxId: string,
+  userMessage: string,
+  botResponse: string
+) {
   const history = conversationHistory.get(senderInboxId) || [];
-  
+
   history.push({
     userMessage,
     botResponse,
-    timestamp: new Date()
+    timestamp: new Date(),
   });
-  
+
   // Keep only last 3 exchanges
   if (history.length > 3) {
     history.shift();
   }
-  
+
   conversationHistory.set(senderInboxId, history);
 }
 
 function getConversationContext(senderInboxId: string): string {
   const history = conversationHistory.get(senderInboxId) || [];
-  
+
   if (history.length === 0) {
     return "";
   }
-  
+
   let context = "Recent conversation context:\n";
   history.forEach((entry, index) => {
     context += `User: ${entry.userMessage}\nBot: ${entry.botResponse}\n`;
   });
   context += "Current message:\n";
-  
+
   return context;
 }
 
 // Clean up old conversations (older than 1 hour)
 function cleanupOldConversations() {
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-  
+
   for (const [senderInboxId, history] of conversationHistory.entries()) {
-    const recentHistory = history.filter(entry => entry.timestamp > oneHourAgo);
-    
+    const recentHistory = history.filter(
+      (entry) => entry.timestamp > oneHourAgo
+    );
+
     if (recentHistory.length === 0) {
       conversationHistory.delete(senderInboxId);
     } else {
@@ -120,61 +144,65 @@ async function main() {
   try {
     // Get and log current date/time for agent context
     const now = new Date();
-    const currentDateTime = now.toLocaleString('en-US', {
-      timeZone: 'America/New_York',
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      timeZoneName: 'short'
+    const currentDateTime = now.toLocaleString("en-US", {
+      timeZone: "America/New_York",
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZoneName: "short",
     });
     console.log(`📅 Current Date/Time: ${currentDateTime}`);
-    console.log(`📅 Agent Context: Today is ${now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`);
-    
+    console.log(
+      `📅 Agent Context: Today is ${now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}`
+    );
+
     console.log("🔄 Initializing Agent SDK client...");
-    
+
     // Create agent using Agent SDK
     // Use Railway volume mount for database persistence
-    const dbPath = process.env.RAILWAY_VOLUME_MOUNT_PATH 
+    const dbPath = process.env.RAILWAY_VOLUME_MOUNT_PATH
       ? `${process.env.RAILWAY_VOLUME_MOUNT_PATH}/devconnect-agent.db3`
       : undefined;
-    
-    console.log(`📂 Database path: ${dbPath || 'default (.data/xmtp/)'}`);
-    
+
+    console.log(`📂 Database path: ${dbPath || "default (.data/xmtp/)"}`);
+
     const agent = await Agent.createFromEnv({
-      env: process.env.XMTP_ENV as 'dev' | 'production' || 'production',
+      env: (process.env.XMTP_ENV as "dev" | "production") || "production",
       dbPath,
       // Custom codecs for Quick Actions, Reactions, and Attachments
       codecs: [
-        new ActionsCodec(), 
-        new IntentCodec(), 
+        new ActionsCodec(),
+        new IntentCodec(),
         new ReactionCodec(),
         new RemoteAttachmentCodec(),
-        new AttachmentCodec()
+        new AttachmentCodec(),
       ],
     });
 
     console.log("🔄 Agent SDK client initialized with Quick Actions codecs");
     console.log(`✓ Agent Address: ${agent.address}`);
     console.log(`✓ Agent Inbox ID: ${agent.client.inboxId}`);
-    
+
     // Verify codecs are registered
     console.log(`🔍 Registered codecs:`, (agent.client as any).codecRegistry);
     console.log(`🔍 ContentTypeActions:`, ContentTypeActions.toString());
-    
+
     // Initialize clients for various tools
     setBroadcastClient(agent.client);
     setGroupClient(agent.client);
     setSidebarClient(agent.client);
     setTreasureHuntClient(agent.client);
-    
+
     // Initialize agent in activity groups
-    const { initializeAgentInGroups, listAllAgentGroups } = await import("./services/agent/tools/activityGroups.js");
+    const { initializeAgentInGroups, listAllAgentGroups } = await import(
+      "./services/agent/tools/activityGroups.js"
+    );
     await initializeAgentInGroups();
-    
+
     // Debug: List all groups agent has access to
     await listAllAgentGroups();
 
@@ -182,7 +210,7 @@ async function main() {
     const reminderDispatcher = createReminderDispatcher();
     reminderDispatcher.start(agent.client);
     console.log("🔄 Reminder dispatcher initialized");
-    
+
     // Handle process termination
     const cleanup = () => {
       console.log("🛑 Shutting down agent...");
@@ -196,25 +224,30 @@ async function main() {
     console.log("👂 Setting up message handlers...");
     console.log("💬 Agent will respond to:");
     console.log("  - Direct messages (DMs)");
-    console.log(`  - Group messages when mentioned with @${MENTION_HANDLES.split(',')[0]}`);
-    
-    agent.on('group-update', async (ctx) => {
+    console.log(
+      `  - Group messages when mentioned with @${MENTION_HANDLES.split(",")[0]}`
+    );
+
+    agent.on("group-update", async (ctx) => {
       const content = ctx.message.content as any;
 
       if (content.addedInboxes?.length > 0) {
         await incrementGroupMemberJoin(ctx.message.conversationId);
-        console.log(`New members added: ${JSON.stringify(content.addedInboxes)}`);
+        console.log(
+          `New members added: ${JSON.stringify(content.addedInboxes)}`
+        );
       }
 
       if (content.removedInboxes?.length > 0) {
         await incrementGroupMemberLeave(ctx.message.conversationId);
-        console.log(`Members removed: ${JSON.stringify(content.removedInboxes)}`);
+        console.log(
+          `Members removed: ${JSON.stringify(content.removedInboxes)}`
+        );
       }
-
     });
 
     // Handle text messages
-    agent.on('text', async (ctx) => {
+    agent.on("text", async (ctx) => {
       try {
         const messageContent = ctx.message.content as string;
         const senderInboxId = ctx.message.senderInboxId;
@@ -224,12 +257,12 @@ async function main() {
 
         // if the agent is added in the third party group, create a new group record
         const exists = await checkGroupExists(conversationId);
-      
+
         if (isGroup && !exists) {
           await insertGroupDetails({
             groupId: conversationId,
             groupName: ctx.conversation.name,
-            groupType: 'activity',
+            groupType: "activity",
             createdBy: await ctx.getSenderAddress(),
             memberCount: (await ctx.conversation.members()).length,
             description: `Activity group for ${ctx.conversation.name}`,
@@ -239,7 +272,7 @@ async function main() {
             totalLeaves: 0,
             metadata: {},
           });
-        };
+        }
 
         if (DEBUG_LOGS) {
           console.log(`📥 Received message:`, {
@@ -247,7 +280,7 @@ async function main() {
             senderInboxId,
             conversationId,
             content: messageContent,
-            isGroup
+            isGroup,
           });
         }
         console.log("🔍 Message content: ****", messageContent);
@@ -296,87 +329,120 @@ async function main() {
 
         try {
           console.log(`🤖 Processing message: "${cleanContent}"`);
-          
+
           // Check for treasure hunt image submissions (mention in treasure hunt group)
           if (isGroup && cleanContent.trim() === "") {
-            const { isTreasureHuntGroup } = await import("./services/agent/tools/treasureHunt.js");
-            
+            const { isTreasureHuntGroup } = await import(
+              "./services/agent/tools/treasureHunt.js"
+            );
+
             if (isTreasureHuntGroup(conversationId)) {
-              console.log(`🏴‍☠️ Mention in treasure hunt group - checking Map for stored image...`);
-              
+              console.log(
+                `🏴‍☠️ Mention in treasure hunt group - checking Map for stored image...`
+              );
+
               // Check the Map for the user's stored image
               const key = `${conversationId}:${senderInboxId}`;
               const storedImage = pendingTreasureImages.get(key);
-              
-              console.log(`🗺️ Map has ${pendingTreasureImages.size} pending images`);
+
+              console.log(
+                `🗺️ Map has ${pendingTreasureImages.size} pending images`
+              );
               console.log(`🔑 Looking for key: ${key}`);
-              
+
               if (storedImage) {
                 const ageSeconds = (Date.now() - storedImage.timestamp) / 1000;
-                console.log(`✅ Found stored image from ${ageSeconds.toFixed(1)}s ago!`);
-                
-                const { handleTreasureHuntImageSubmission } = await import("./services/agent/tools/treasureHunt.js");
-                
+                console.log(
+                  `✅ Found stored image from ${ageSeconds.toFixed(1)}s ago!`
+                );
+
+                const { handleTreasureHuntImageSubmission } = await import(
+                  "./services/agent/tools/treasureHunt.js"
+                );
+
                 const response = await handleTreasureHuntImageSubmission(
                   conversationId,
                   senderInboxId,
                   storedImage.content,
                   storedImage.messageId
                 );
-                
+
                 // Remove from Map (one-time use)
                 pendingTreasureImages.delete(key);
                 console.log(`🗑️ Removed image from Map`);
-                
+
                 if (response && response.trim() !== "") {
                   await ctx.sendText(response);
                 }
                 return;
               } else {
-                console.log(`❌ No stored image in Map - showing current task...`);
-                const { getTreasureHuntStatus } = await import("./services/agent/tools/treasureHunt.js");
+                console.log(
+                  `❌ No stored image in Map - showing current task...`
+                );
+                const { getTreasureHuntStatus } = await import(
+                  "./services/agent/tools/treasureHunt.js"
+                );
                 const status = await getTreasureHuntStatus(conversationId);
                 await ctx.sendText(status);
                 return;
               }
             }
           }
-          
-          let senderAddress = await ctx.getSenderAddress() || "";
+
+          let senderAddress = (await ctx.getSenderAddress()) || "";
           await incrementMessageCount(senderInboxId, senderAddress);
           // Check for sidebar group creation requests (only in groups)
           if (isGroup && isSidebarRequest(cleanContent)) {
             const groupName = parseSidebarCommand(cleanContent);
             if (groupName) {
-              const sidebarResponse = await handleSidebarRequest(groupName, ctx.message, agent.client as any, ctx.conversation, senderAddress);
-              if (sidebarResponse && sidebarResponse.trim() !== "") {                 
+              const sidebarResponse = await handleSidebarRequest(
+                groupName,
+                ctx.message,
+                agent.client as any,
+                ctx.conversation,
+                senderAddress
+              );
+              if (sidebarResponse && sidebarResponse.trim() !== "") {
                 await ctx.sendText(sidebarResponse);
               }
               return;
             }
           }
-          
+
           // Check for broadcast commands
-          if (!isGroup && cleanContent.toLowerCase().startsWith("/broadcast ")) {
+          if (
+            !isGroup &&
+            cleanContent.toLowerCase().startsWith("/broadcast ")
+          ) {
             const broadcastMessage = cleanContent.substring(11).trim();
-            
+
             try {
-              const { previewBroadcast } = await import("./services/agent/tools/broadcast.js");
-              
+              const { previewBroadcast } = await import(
+                "./services/agent/tools/broadcast.js"
+              );
+
               const result = await previewBroadcast(
                 broadcastMessage,
                 senderInboxId,
                 conversationId
               );
-              
+
               const actionsData = JSON.parse(result);
-              const broadcastConversation = await ctx.client.conversations.getConversationById(conversationId);
+              const broadcastConversation =
+                await ctx.client.conversations.getConversationById(
+                  conversationId
+                );
               if (broadcastConversation) {
-                await broadcastConversation.send(actionsData.content, ContentTypeActions);
+                await broadcastConversation.send(
+                  actionsData.content,
+                  ContentTypeActions
+                );
                 console.log(`✅ Sent broadcast preview with quick actions`);
               }
             } catch (broadcastError: any) {
-              await ctx.sendText(`❌ Broadcast preview failed: ${broadcastError.message}`);
+              await ctx.sendText(
+                `❌ Broadcast preview failed: ${broadcastError.message}`
+              );
               console.error("❌ Broadcast error:", broadcastError);
             }
             return;
@@ -385,86 +451,162 @@ async function main() {
           // Get conversation context for this user
           const conversationContext = getConversationContext(senderInboxId);
           const messageWithContext = conversationContext + cleanContent;
-          
+
           // Generate AI response
           const response = await aiAgent.run(
             messageWithContext,
             senderInboxId,
             conversationId,
             isGroup,
-            senderAddress,
+            senderAddress
           );
 
           if (response) {
             // Log the agent's response
             console.log(`🤖 Agent Response: "${response}"`);
             console.log(`🔍 Response length: ${response.length} chars`);
-            
+
             // Check if AI is responding to a greeting or giving a generic "how can I help" response
             const lowerResponse = response.toLowerCase();
             const hasSchedule = response.includes("Schedule");
             const hasWifi = response.includes("Wifi");
             const hasLogistics = response.includes("Event Logistics");
-            
+
             // Detect generic greeting responses that should use ShowMenu tool instead
-            const isGenericGreeting = (
-              (lowerResponse.includes("how can i assist") || 
-               lowerResponse.includes("how can i help") ||
-               lowerResponse.includes("what can i help") ||
-               lowerResponse.includes("let me know")) &&
-              response.length < 250 // Short generic response
+            const isGenericGreeting =
+              (lowerResponse.includes("how can i assist") ||
+                lowerResponse.includes("how can i help") ||
+                lowerResponse.includes("what can i help") ||
+                lowerResponse.includes("let me know")) &&
+              response.length < 250; // Short generic response
+
+            console.log(
+              `🔍 Menu detection - Schedule: ${hasSchedule}, Wifi: ${hasWifi}, Logistics: ${hasLogistics}, GenericGreeting: ${isGenericGreeting}`
             );
-            
-            console.log(`🔍 Menu detection - Schedule: ${hasSchedule}, Wifi: ${hasWifi}, Logistics: ${hasLogistics}, GenericGreeting: ${isGenericGreeting}`);
-            
-            const isListingMenu = (hasSchedule && hasWifi && hasLogistics) || isGenericGreeting;
-            
+
+            const isListingMenu =
+              (hasSchedule && hasWifi && hasLogistics) || isGenericGreeting;
+
             if (isListingMenu) {
-              console.warn("⚠️ AI tried to list menu in text instead of using ShowMenu tool!");
-              console.log("🔄 Sending menu Quick Actions WITHOUT followup wrapper...");
-              
+              console.warn(
+                "⚠️ AI tried to list menu in text instead of using ShowMenu tool!"
+              );
+              console.log(
+                "🔄 Sending menu Quick Actions WITHOUT followup wrapper..."
+              );
+
               // Send the menu Quick Actions directly - NO "is there anything else" wrapper
               const menuActionsContent: ActionsContent = {
                 id: "devconnect_welcome_actions",
-                description: "Hi! I'm Rocky, your event buddy at DevConnect. Here's what I can help you with:",
+                description:
+                  "Hi! I'm Rocky, your event buddy at DevConnect. Here's what I can help you with:",
                 actions: [
-                  { id: "schedule", label: "Schedule", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760465562/ChatGPT_Image_Oct_14_2025_at_03_12_20_PM_p7jhdx.png", style: "primary" },
-                  { id: "wifi", label: "Wifi", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/c_crop,w_1100,h_1100/v1760465369/vecteezy_simple-wifi-icon_8014226-1_jicvnk.jpg", style: "secondary" },
-                  { id: "event_logistics", label: "Event Logistics", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464845/checklist_gd3rpo.png", style: "secondary" },
-                  { id: "join_base_group", label: "Base Group", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760466568/base_s5smwn.png", style: "secondary" },
+                  {
+                    id: "schedule",
+                    label: "Schedule",
+                    imageUrl:
+                      "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760465562/ChatGPT_Image_Oct_14_2025_at_03_12_20_PM_p7jhdx.png",
+                    style: "primary",
+                  },
+                  {
+                    id: "wifi",
+                    label: "Wifi",
+                    imageUrl:
+                      "https://res.cloudinary.com/dg5qvbxjp/image/upload/c_crop,w_1100,h_1100/v1760465369/vecteezy_simple-wifi-icon_8014226-1_jicvnk.jpg",
+                    style: "secondary",
+                  },
+                  {
+                    id: "event_logistics",
+                    label: "Event Logistics",
+                    imageUrl:
+                      "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464845/checklist_gd3rpo.png",
+                    style: "secondary",
+                  },
+                  {
+                    id: "join_base_group",
+                    label: "Base Group",
+                    imageUrl:
+                      "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760466568/base_s5smwn.png",
+                    style: "secondary",
+                  },
                   // { id: "join_eth_group", label: "ETH Group", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760463829/Ethereum_Foundation_Logo_Vector_xddxiu.svg", style: "secondary" },
-                  { id: "join_xmtp_group", label: "XMTP Group", imageUrl: "https://d392zik6ho62y0.cloudfront.net/images/xmtp-logo.png", style: "secondary" },
-                  { id: "join_groups", label: "More Groups", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464996/vecteezy_join-group-icon-in-trendy-outline-style-isolated-on-white_32201148_mkmtik.jpg", style: "secondary" },
-                  { id: "treasure_hunt", label: "Treasure Hunt", imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760561042/ChatGPT_Image_Oct_15_2025_at_05_43_44_PM_wwnxiq.png", style: "secondary" }
-                ]
+                  {
+                    id: "join_xmtp_group",
+                    label: "XMTP Group",
+                    imageUrl:
+                      "https://d392zik6ho62y0.cloudfront.net/images/xmtp-logo.png",
+                    style: "secondary",
+                  },
+                  {
+                    id: "join_groups",
+                    label: "More Groups",
+                    imageUrl:
+                      "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464996/vecteezy_join-group-icon-in-trendy-outline-style-isolated-on-white_32201148_mkmtik.jpg",
+                    style: "secondary",
+                  },
+                  {
+                    id: "treasure_hunt",
+                    label: "Treasure Hunt",
+                    imageUrl:
+                      "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760561042/ChatGPT_Image_Oct_15_2025_at_05_43_44_PM_wwnxiq.png",
+                    style: "secondary",
+                  },
+                ],
               };
-              
-              const menuConversation = await ctx.client.conversations.getConversationById(conversationId);
+
+              const menuConversation =
+                await ctx.client.conversations.getConversationById(
+                  conversationId
+                );
               if (menuConversation) {
-                await (menuConversation as any).send(menuActionsContent, ContentTypeActions);
-                console.log(`✅ Sent Quick Actions menu directly (no followup)`);
+                await (menuConversation as any).send(
+                  menuActionsContent,
+                  ContentTypeActions
+                );
+                console.log(
+                  `✅ Sent Quick Actions menu directly (no followup)`
+                );
               }
-              
-              addToConversationHistory(senderInboxId, cleanContent, "Menu shown via Quick Actions");
+
+              addToConversationHistory(
+                senderInboxId,
+                cleanContent,
+                "Menu shown via Quick Actions"
+              );
               return; // Exit early - menu sent, don't add followup
             }
-            
+
             // Check if this is a Quick Actions response from ShowMenu tool
             if (response.includes('"contentType":"coinbase.com/actions:1.0"')) {
               try {
                 const quickActionsData = JSON.parse(response);
                 const actionsContent = quickActionsData.content;
-                
-                const quickActionsConversation = await ctx.client.conversations.getConversationById(conversationId);
+
+                const quickActionsConversation =
+                  await ctx.client.conversations.getConversationById(
+                    conversationId
+                  );
                 if (quickActionsConversation) {
-                  await quickActionsConversation.send(actionsContent, ContentTypeActions);
+                  await quickActionsConversation.send(
+                    actionsContent,
+                    ContentTypeActions
+                  );
                   console.log(`✅ Sent Quick Actions response`);
                 }
-                
-                addToConversationHistory(senderInboxId, cleanContent, "Quick Actions response sent");
+
+                addToConversationHistory(
+                  senderInboxId,
+                  cleanContent,
+                  "Quick Actions response sent"
+                );
               } catch (quickActionsError) {
-                console.error("❌ Error sending Quick Actions:", quickActionsError);
-                await ctx.sendText("Hi! I'm the DevConnect 2025 Concierge. I can help you with the Schedule, Set Reminders, Event Info, Join Groups, and Sponsored Slot information. What would you like to know?");
+                console.error(
+                  "❌ Error sending Quick Actions:",
+                  quickActionsError
+                );
+                await ctx.sendText(
+                  "Hi! I'm the DevConnect 2025 Concierge. I can help you with the Schedule, Set Reminders, Event Info, Join Groups, and Sponsored Slot information. What would you like to know?"
+                );
               }
             } else {
               // Regular text response with follow-up actions
@@ -477,28 +619,34 @@ Is there anything else I can help with?`,
                   {
                     id: "show_main_menu",
                     label: "✅ Yes",
-                    style: "primary"
+                    style: "primary",
                   },
                   {
                     id: "end_conversation",
                     label: "❌ No",
-                    style: "secondary"
-                  }
-                ]
+                    style: "secondary",
+                  },
+                ],
               };
-              
-              const followupConversation = await ctx.client.conversations.getConversationById(conversationId);
+
+              const followupConversation =
+                await ctx.client.conversations.getConversationById(
+                  conversationId
+                );
               if (followupConversation) {
-                await (followupConversation as any).send(followupActionsContent, ContentTypeActions);
+                await (followupConversation as any).send(
+                  followupActionsContent,
+                  ContentTypeActions
+                );
                 console.log(`✅ Sent response with follow-up actions`);
               }
-              
+
               addToConversationHistory(senderInboxId, cleanContent, response);
             }
           }
         } catch (error) {
           console.error("❌ Error generating or sending response:", error);
-          
+
           try {
             await ctx.sendText(
               "Sorry, I encountered an error while processing your request. Please try again later."
@@ -513,50 +661,61 @@ Is there anything else I can help with?`,
     });
 
     // Handle Remote Attachment messages (images for treasure hunt)
-    agent.on('message', async (ctx) => {
+    agent.on("message", async (ctx) => {
       const contentTypeId = ctx.message.contentType?.typeId;
-      
+
       // Debug log all message types
-      console.log(`📨 Message type: ${contentTypeId}, From: ${ctx.message.senderInboxId.substring(0, 16)}...`);
-      
+      console.log(
+        `📨 Message type: ${contentTypeId}, From: ${ctx.message.senderInboxId.substring(0, 16)}...`
+      );
+
       // Check if this is a remote attachment or attachment
-      const isRemoteAttachment = contentTypeId?.includes('remoteStaticAttachment') || 
-                                  contentTypeId?.includes('RemoteAttachment');
-      const isAttachment = contentTypeId?.includes('attachment') && !isRemoteAttachment;
-      
+      const isRemoteAttachment =
+        contentTypeId?.includes("remoteStaticAttachment") ||
+        contentTypeId?.includes("RemoteAttachment");
+      const isAttachment =
+        contentTypeId?.includes("attachment") && !isRemoteAttachment;
+
       if (!isRemoteAttachment && !isAttachment) {
         return; // Not an attachment, let other handlers deal with it
       }
-      
-      console.log(`📸 Detected ${isRemoteAttachment ? 'remote' : 'inline'} attachment!`);
-      
+
+      console.log(
+        `📸 Detected ${isRemoteAttachment ? "remote" : "inline"} attachment!`
+      );
+
       // Skip our own messages
       if (ctx.message.senderInboxId === agent.client.inboxId) {
         return;
       }
-      
-      const { isTreasureHuntGroup, handleTreasureHuntImageSubmission } = await import("./services/agent/tools/treasureHunt.js");
-      
+
+      const { isTreasureHuntGroup, handleTreasureHuntImageSubmission } =
+        await import("./services/agent/tools/treasureHunt.js");
+
       // Check if this is from a treasure hunt group
       const isGroup = ctx.isGroup();
       const isTreasureGroup = isTreasureHuntGroup(ctx.conversation.id);
-      
-      console.log(`🔍 Is group: ${isGroup}, Is treasure hunt: ${isTreasureGroup}, Group ID: ${ctx.conversation.id}`);
-      
+
+      console.log(
+        `🔍 Is group: ${isGroup}, Is treasure hunt: ${isTreasureGroup}, Group ID: ${ctx.conversation.id}`
+      );
+
       if (!isGroup || !isTreasureGroup) {
         console.log(`⏭️ Not a treasure hunt group, skipping attachment`);
         return; // Not a treasure hunt group
       }
-      
+
       // Store this image in the Map for when the user mentions Rocky
       const key = `${ctx.conversation.id}:${ctx.message.senderInboxId}`;
       pendingTreasureImages.set(key, {
         content: ctx.message.content,
         messageId: ctx.message.id,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
-      console.log(`📸 Stored image for user ${ctx.message.senderInboxId.substring(0, 12)}... (waiting for mention)`);
-      
+      console.log(
+        `📸 Stored image for user ${ctx.message.senderInboxId.substring(0, 12)}... (waiting for mention)`
+      );
+
       // Clean up old images (older than 2 minutes)
       for (const [k, v] of pendingTreasureImages.entries()) {
         if (Date.now() - v.timestamp > 120000) {
@@ -564,7 +723,7 @@ Is there anything else I can help with?`,
         }
       }
       return;
-      
+
       // Handle the image submission
       const attachment = ctx.message.content as any;
       const response = await handleTreasureHuntImageSubmission(
@@ -573,7 +732,7 @@ Is there anything else I can help with?`,
         attachment,
         ctx.message.id
       );
-      
+
       if (response && response.trim() !== "") {
         await ctx.sendText(response);
       }
@@ -581,22 +740,26 @@ Is there anything else I can help with?`,
 
     // Handle Intent messages (Quick Action responses) using generic message handler
     // Agent SDK doesn't have 'intent' event, so we check content type manually
-    agent.on('message', async (ctx) => {
+    agent.on("message", async (ctx) => {
       // Only handle Intent content type
-      if (ctx.message.contentType?.typeId !== ContentTypeIntent.toString() && 
-          ctx.message.contentType?.typeId !== "coinbase.com/intent:1.0" &&
-          ctx.message.contentType?.typeId !== "intent") {
+      if (
+        ctx.message.contentType?.typeId !== ContentTypeIntent.toString() &&
+        ctx.message.contentType?.typeId !== "coinbase.com/intent:1.0" &&
+        ctx.message.contentType?.typeId !== "intent"
+      ) {
         return; // Not an intent message, let other handlers deal with it
       }
-      
+
       const intentContent = ctx.message.content as any;
       const actionId = intentContent.actionId;
       const originalActionsId = intentContent.id;
-      
+
       console.log(`🎯 Received Quick Action intent: ${actionId}`);
       console.log(`🎯 Intent from actions ID: ${originalActionsId}`);
-      console.log(`🎯 Message content type: ${ctx.message.contentType?.typeId}`);
-      
+      console.log(
+        `🎯 Message content type: ${ctx.message.contentType?.typeId}`
+      );
+
       // Handle different action IDs (same logic as your original implementation)
       switch (actionId) {
         case "schedule":
@@ -611,9 +774,9 @@ Examples:
 •⁠  ⁠What events are on Thursday?
 
 Just ask naturally - I understand conversational requests!`;
-          
+
           await ctx.sendText(scheduleResponse);
-          
+
           const scheduleFollowupActionsContent: ActionsContent = {
             id: "schedule_followup_actions",
             description: "Is there anything else I can help with?",
@@ -621,49 +784,60 @@ Just ask naturally - I understand conversational requests!`;
               {
                 id: "show_main_menu",
                 label: "✅ Yes",
-                style: "primary"
+                style: "primary",
               },
               {
                 id: "end_conversation",
                 label: "❌ No",
-                style: "secondary"
-              }
-            ]
+                style: "secondary",
+              },
+            ],
           };
-          const scheduleConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
+          const scheduleConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
           if (scheduleConversation) {
-            await scheduleConversation.send(scheduleFollowupActionsContent, ContentTypeActions);
+            await scheduleConversation.send(
+              scheduleFollowupActionsContent,
+              ContentTypeActions
+            );
           }
           break;
-        
+
         case "show_main_menu":
           const mainMenuActionsContent: ActionsContent = {
             id: "devconnect_welcome_actions",
-            description: "Hi! I'm Rocky, your event buddy at DevConnect. Here's what I can help you with:",
+            description:
+              "Hi! I'm Rocky, your event buddy at DevConnect. Here's what I can help you with:",
             actions: [
               {
                 id: "schedule",
                 label: "Schedule",
-                imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760465562/ChatGPT_Image_Oct_14_2025_at_03_12_20_PM_p7jhdx.png",
-                style: "primary"
+                imageUrl:
+                  "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760465562/ChatGPT_Image_Oct_14_2025_at_03_12_20_PM_p7jhdx.png",
+                style: "primary",
               },
               {
                 id: "wifi",
                 label: "Wifi",
-                imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760465369/vecteezy_simple-wifi-icon_8014226-1_jicvnk.jpg",
-                style: "secondary"
+                imageUrl:
+                  "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760465369/vecteezy_simple-wifi-icon_8014226-1_jicvnk.jpg",
+                style: "secondary",
               },
               {
                 id: "event_logistics",
                 label: "Event Logistics",
-                imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464845/checklist_gd3rpo.png",
-                style: "secondary"
+                imageUrl:
+                  "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464845/checklist_gd3rpo.png",
+                style: "secondary",
               },
               {
                 id: "join_base_group",
                 label: "Base Group",
-                imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760466568/base_s5smwn.png",
-                style: "secondary"
+                imageUrl:
+                  "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760466568/base_s5smwn.png",
+                style: "secondary",
               },
               // {
               //   id: "join_eth_group",
@@ -674,34 +848,47 @@ Just ask naturally - I understand conversational requests!`;
               {
                 id: "join_xmtp_group",
                 label: "XMTP Group",
-                imageUrl: "https://d392zik6ho62y0.cloudfront.net/images/xmtp-logo.png",
-                style: "secondary"
+                imageUrl:
+                  "https://d392zik6ho62y0.cloudfront.net/images/xmtp-logo.png",
+                style: "secondary",
               },
               {
                 id: "join_groups",
                 label: "More Groups",
-                imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464996/vecteezy_join-group-icon-in-trendy-outline-style-isolated-on-white_32201148_mkmtik.jpg",
-                style: "secondary"
+                imageUrl:
+                  "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464996/vecteezy_join-group-icon-in-trendy-outline-style-isolated-on-white_32201148_mkmtik.jpg",
+                style: "secondary",
               },
               {
                 id: "treasure_hunt",
                 label: "Treasure Hunt",
-                imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760561042/ChatGPT_Image_Oct_15_2025_at_05_43_44_PM_wwnxiq.png",
-                style: "secondary"
-              }
-            ]
+                imageUrl:
+                  "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760561042/ChatGPT_Image_Oct_15_2025_at_05_43_44_PM_wwnxiq.png",
+                style: "secondary",
+              },
+            ],
           };
-          console.log(`🎯 Sending main menu with ${mainMenuActionsContent.actions.length} actions`);
-          const mainMenuConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
+          console.log(
+            `🎯 Sending main menu with ${mainMenuActionsContent.actions.length} actions`
+          );
+          const mainMenuConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
           if (mainMenuConversation) {
             console.log(`🎯 Conversation found, sending Quick Actions...`);
-            await mainMenuConversation.send(mainMenuActionsContent, ContentTypeActions);
+            await mainMenuConversation.send(
+              mainMenuActionsContent,
+              ContentTypeActions
+            );
             console.log(`✅ Main menu Quick Actions sent successfully`);
           } else {
-            console.error(`❌ Could not find conversation ${ctx.conversation.id}`);
+            console.error(
+              `❌ Could not find conversation ${ctx.conversation.id}`
+            );
           }
           break;
-          
+
         case "wifi":
           await incrementActionClick(ctx.message.senderInboxId, "Wifi");
           const wifiActionsContent: ActionsContent = {
@@ -717,23 +904,29 @@ Is there anything else I can help with?`,
               {
                 id: "show_main_menu",
                 label: "✅ Yes",
-                style: "primary"
+                style: "primary",
               },
               {
                 id: "end_conversation",
                 label: "❌ No",
-                style: "secondary"
-              }
-            ]
+                style: "secondary",
+              },
+            ],
           };
-          const wifiConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
+          const wifiConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
           if (wifiConversation) {
             await wifiConversation.send(wifiActionsContent, ContentTypeActions);
           }
           break;
 
         case "event_logistics":
-          await incrementActionClick(ctx.message.senderInboxId, "EventLogistics");
+          await incrementActionClick(
+            ctx.message.senderInboxId,
+            "EventLogistics"
+          );
           await ctx.sendText(`📋 Event Logistics
 
 🗓️ Dates: November 13-19, 2025
@@ -746,7 +939,7 @@ For detailed information about:
 • Local amenities
 
 Visit: https://devconnect.org/calendar `);
-          
+
           const logisticsFollowupActionsContent: ActionsContent = {
             id: "logistics_followup_actions",
             description: "Is there anything else I can help with?",
@@ -754,23 +947,32 @@ Visit: https://devconnect.org/calendar `);
               {
                 id: "show_main_menu",
                 label: "✅ Yes",
-                style: "primary"
+                style: "primary",
               },
               {
                 id: "end_conversation",
                 label: "❌ No",
-                style: "secondary"
-              }
-            ]
+                style: "secondary",
+              },
+            ],
           };
-          const logisticsConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
+          const logisticsConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
           if (logisticsConversation) {
-            await logisticsConversation.send(logisticsFollowupActionsContent, ContentTypeActions);
+            await logisticsConversation.send(
+              logisticsFollowupActionsContent,
+              ContentTypeActions
+            );
           }
           break;
 
         case "concierge_support":
-          await incrementActionClick(ctx.message.senderInboxId, "ConciergeSupport");
+          await incrementActionClick(
+            ctx.message.senderInboxId,
+            "ConciergeSupport"
+          );
           const conciergeActionsContent: ActionsContent = {
             id: "concierge_support_actions",
             description: `Concierge Support
@@ -784,34 +986,48 @@ Is there anything else I can help with?`,
               {
                 id: "show_main_menu",
                 label: "✅ Yes",
-                style: "primary"
+                style: "primary",
               },
               {
                 id: "end_conversation",
                 label: "❌ No",
-                style: "secondary"
-              }
-            ]
+                style: "secondary",
+              },
+            ],
           };
-          const conciergeConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
+          const conciergeConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
           if (conciergeConversation) {
-            await conciergeConversation.send(conciergeActionsContent, ContentTypeActions);
+            await conciergeConversation.send(
+              conciergeActionsContent,
+              ContentTypeActions
+            );
           }
           break;
 
         case "treasure_hunt":
-          const { isTreasureHuntGroup, assignToTreasureHuntGroup, sendCurrentTaskToGroup } = await import("./services/agent/tools/treasureHunt.js");
-          
+          const {
+            isTreasureHuntGroup,
+            assignToTreasureHuntGroup,
+            sendCurrentTaskToGroup,
+          } = await import("./services/agent/tools/treasureHunt.js");
+
           // If clicked from within a treasure hunt group, just show current task
           if (ctx.isGroup() && isTreasureHuntGroup(ctx.conversation.id)) {
-            console.log(`🏴‍☠️ Treasure hunt button clicked in group - showing current task`);
+            console.log(
+              `🏴‍☠️ Treasure hunt button clicked in group - showing current task`
+            );
             await sendCurrentTaskToGroup(ctx.conversation.id);
             break;
           }
-          
+
           // In DM - assign to group with welcome message
-          const treasureHuntResult = await assignToTreasureHuntGroup(ctx.message.senderInboxId);
-          
+          const treasureHuntResult = await assignToTreasureHuntGroup(
+            ctx.message.senderInboxId
+          );
+
           const treasureHuntActionsContent: ActionsContent = {
             id: "treasure_hunt_join_response",
             description: `${treasureHuntResult.message}
@@ -821,36 +1037,54 @@ Is there anything else I can help with?`,
               {
                 id: "show_main_menu",
                 label: "✅ Yes",
-                style: "primary"
+                style: "primary",
               },
               {
                 id: "end_conversation",
                 label: "❌ No",
-                style: "secondary"
-              }
-            ]
+                style: "secondary",
+              },
+            ],
           };
-          const treasureHuntConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
+          const treasureHuntConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
           if (treasureHuntConversation) {
-            await (treasureHuntConversation as any).send(treasureHuntActionsContent, ContentTypeActions);
+            await (treasureHuntConversation as any).send(
+              treasureHuntActionsContent,
+              ContentTypeActions
+            );
           }
           break;
 
         case "join_groups":
           await incrementActionClick(ctx.message.senderInboxId, "MoreGroups");
-          const { generateGroupSelectionQuickActions } = await import("./services/agent/tools/activityGroups.js");
+          const { generateGroupSelectionQuickActions } = await import(
+            "./services/agent/tools/activityGroups.js"
+          );
           const groupSelectionActions = generateGroupSelectionQuickActions();
-          const groupSelectionConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
+          const groupSelectionConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
           if (groupSelectionConversation) {
-            await groupSelectionConversation.send(groupSelectionActions, ContentTypeActions);
+            await groupSelectionConversation.send(
+              groupSelectionActions,
+              ContentTypeActions
+            );
           }
           break;
 
         case "join_base_group":
           await incrementActionClick(ctx.message.senderInboxId, "BaseGroup");
-          const { addMemberToBaseGlobalEvents } = await import("./services/agent/tools/activityGroups.js");
-          const baseGroupResult = await addMemberToBaseGlobalEvents(ctx.message.senderInboxId);
-          
+          const { addMemberToBaseGlobalEvents } = await import(
+            "./services/agent/tools/activityGroups.js"
+          );
+          const baseGroupResult = await addMemberToBaseGlobalEvents(
+            ctx.message.senderInboxId
+          );
+
           const baseGroupFollowupActionsContent: ActionsContent = {
             id: "base_group_join_followup",
             description: `${baseGroupResult}
@@ -860,25 +1094,35 @@ Is there anything else I can help with?`,
               {
                 id: "show_main_menu",
                 label: "✅ Yes",
-                style: "primary"
+                style: "primary",
               },
               {
                 id: "end_conversation",
                 label: "❌ No",
-                style: "secondary"
-              }
-            ]
+                style: "secondary",
+              },
+            ],
           };
-          const baseConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
+          const baseConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
           if (baseConversation) {
-            await baseConversation.send(baseGroupFollowupActionsContent, ContentTypeActions);
+            await baseConversation.send(
+              baseGroupFollowupActionsContent,
+              ContentTypeActions
+            );
           }
           break;
 
         case "join_eth_group":
-          const { addMemberToETHGroup } = await import("./services/agent/tools/activityGroups.js");
-          const ethGroupResult = await addMemberToETHGroup(ctx.message.senderInboxId);
-          
+          const { addMemberToETHGroup } = await import(
+            "./services/agent/tools/activityGroups.js"
+          );
+          const ethGroupResult = await addMemberToETHGroup(
+            ctx.message.senderInboxId
+          );
+
           const ethGroupFollowupActionsContent: ActionsContent = {
             id: "eth_group_join_followup",
             description: `${ethGroupResult}
@@ -888,26 +1132,36 @@ Is there anything else I can help with?`,
               {
                 id: "show_main_menu",
                 label: "✅ Yes",
-                style: "primary"
+                style: "primary",
               },
               {
                 id: "end_conversation",
                 label: "❌ No",
-                style: "secondary"
-              }
-            ]
+                style: "secondary",
+              },
+            ],
           };
-          const ethConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
+          const ethConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
           if (ethConversation) {
-            await ethConversation.send(ethGroupFollowupActionsContent, ContentTypeActions);
+            await ethConversation.send(
+              ethGroupFollowupActionsContent,
+              ContentTypeActions
+            );
           }
           break;
 
         case "join_xmtp_group":
           await incrementActionClick(ctx.message.senderInboxId, "XMTPGroup");
-          const { addMemberToXMTPGroup } = await import("./services/agent/tools/activityGroups.js");
-          const xmtpGroupResult = await addMemberToXMTPGroup(ctx.message.senderInboxId);
-          
+          const { addMemberToXMTPGroup } = await import(
+            "./services/agent/tools/activityGroups.js"
+          );
+          const xmtpGroupResult = await addMemberToXMTPGroup(
+            ctx.message.senderInboxId
+          );
+
           const xmtpGroupFollowupActionsContent: ActionsContent = {
             id: "xmtp_group_join_followup",
             description: `${xmtpGroupResult}
@@ -917,27 +1171,41 @@ Is there anything else I can help with?`,
               {
                 id: "show_main_menu",
                 label: "✅ Yes",
-                style: "primary"
+                style: "primary",
               },
               {
                 id: "end_conversation",
                 label: "❌ No",
-                style: "secondary"
-              }
-            ]
+                style: "secondary",
+              },
+            ],
           };
-          const xmtpConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
+          const xmtpConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
           if (xmtpConversation) {
-            await xmtpConversation.send(xmtpGroupFollowupActionsContent, ContentTypeActions);
+            await xmtpConversation.send(
+              xmtpGroupFollowupActionsContent,
+              ContentTypeActions
+            );
           }
           break;
 
         // DevConnect group joining cases
         case "join_ethcon_argentina":
-          await incrementActionClick(ctx.message.senderInboxId, "EthconArgentina");
-          const { addMemberToActivityGroup: addEthconArg } = await import("./services/agent/tools/activityGroups.js");
-          const ethconArgResult = await addEthconArg("ethcon_argentina", ctx.message.senderInboxId);
-          
+          await incrementActionClick(
+            ctx.message.senderInboxId,
+            "EthconArgentina"
+          );
+          const { addMemberToActivityGroup: addEthconArg } = await import(
+            "./services/agent/tools/activityGroups.js"
+          );
+          const ethconArgResult = await addEthconArg(
+            "ethcon_argentina",
+            ctx.message.senderInboxId
+          );
+
           const ethconArgFollowupActionsContent: ActionsContent = {
             id: "ethcon_argentina_join_followup",
             description: `${ethconArgResult}
@@ -947,26 +1215,40 @@ Is there anything else I can help with?`,
               {
                 id: "show_main_menu",
                 label: "✅ Yes",
-                style: "primary"
+                style: "primary",
               },
               {
                 id: "end_conversation",
                 label: "❌ No",
-                style: "secondary"
-              }
-            ]
+                style: "secondary",
+              },
+            ],
           };
-          const ethconConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
+          const ethconConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
           if (ethconConversation) {
-            await ethconConversation.send(ethconArgFollowupActionsContent, ContentTypeActions);
+            await ethconConversation.send(
+              ethconArgFollowupActionsContent,
+              ContentTypeActions
+            );
           }
           break;
 
         case "join_staking_summit":
-          await incrementActionClick(ctx.message.senderInboxId, "StakingSummit");
-          const { addMemberToActivityGroup: addStakingSummit } = await import("./services/agent/tools/activityGroups.js");
-          const stakingSummitResult = await addStakingSummit("staking_summit", ctx.message.senderInboxId);
-          
+          await incrementActionClick(
+            ctx.message.senderInboxId,
+            "StakingSummit"
+          );
+          const { addMemberToActivityGroup: addStakingSummit } = await import(
+            "./services/agent/tools/activityGroups.js"
+          );
+          const stakingSummitResult = await addStakingSummit(
+            "staking_summit",
+            ctx.message.senderInboxId
+          );
+
           const stakingSummitFollowupActionsContent: ActionsContent = {
             id: "staking_summit_join_followup",
             description: `${stakingSummitResult}
@@ -976,26 +1258,40 @@ Is there anything else I can help with?`,
               {
                 id: "show_main_menu",
                 label: "✅ Yes",
-                style: "primary"
+                style: "primary",
               },
               {
                 id: "end_conversation",
                 label: "❌ No",
-                style: "secondary"
-              }
-            ]
+                style: "secondary",
+              },
+            ],
           };
-          const stakingConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
+          const stakingConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
           if (stakingConversation) {
-            await stakingConversation.send(stakingSummitFollowupActionsContent, ContentTypeActions);
+            await stakingConversation.send(
+              stakingSummitFollowupActionsContent,
+              ContentTypeActions
+            );
           }
           break;
 
         case "join_builder_nights":
-          await incrementActionClick(ctx.message.senderInboxId, "BuilderNights");
-          const { addMemberToActivityGroup: addBuilderNights } = await import("./services/agent/tools/activityGroups.js");
-          const builderNightsResult = await addBuilderNights("builder_nights", ctx.message.senderInboxId);
-          
+          await incrementActionClick(
+            ctx.message.senderInboxId,
+            "BuilderNights"
+          );
+          const { addMemberToActivityGroup: addBuilderNights } = await import(
+            "./services/agent/tools/activityGroups.js"
+          );
+          const builderNightsResult = await addBuilderNights(
+            "builder_nights",
+            ctx.message.senderInboxId
+          );
+
           const builderNightsFollowupActionsContent: ActionsContent = {
             id: "builder_nights_join_followup",
             description: `${builderNightsResult}
@@ -1005,27 +1301,37 @@ Is there anything else I can help with?`,
               {
                 id: "show_main_menu",
                 label: "✅ Yes",
-                style: "primary"
+                style: "primary",
               },
               {
                 id: "end_conversation",
                 label: "❌ No",
-                style: "secondary"
-              }
-            ]
+                style: "secondary",
+              },
+            ],
           };
-          const builderConversation = await ctx.client.conversations.getConversationById(ctx.conversation.id);
+          const builderConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
           if (builderConversation) {
-            await builderConversation.send(builderNightsFollowupActionsContent, ContentTypeActions);
+            await builderConversation.send(
+              builderNightsFollowupActionsContent,
+              ContentTypeActions
+            );
           }
           break;
 
         case "treasure_hunt_status":
-          const { getTreasureHuntStatus } = await import("./services/agent/tools/treasureHunt.js");
-          const statusMessage = await getTreasureHuntStatus(ctx.conversation.id);
+          const { getTreasureHuntStatus } = await import(
+            "./services/agent/tools/treasureHunt.js"
+          );
+          const statusMessage = await getTreasureHuntStatus(
+            ctx.conversation.id
+          );
           await ctx.sendText(statusMessage);
           break;
-          
+
         case "treasure_hunt_rules":
           await ctx.sendText(`🏴‍☠️ Treasure Hunt Rules
 
@@ -1042,30 +1348,182 @@ Is there anything else I can help with?`,
           break;
 
         case "end_conversation":
-          await ctx.sendText("Great! Message me 👋 if you want to view the option menu again!");
+          await ctx.sendText(
+            "Great! Message me 👋 if you want to view the option menu again!"
+          );
           break;
-          
+
+        // Broadcast confirmation handlers
+        case "broadcast_yes":
+          try {
+            const { confirmBroadcast } = await import(
+              "./services/agent/tools/broadcast.js"
+            );
+            const result = await confirmBroadcast(
+              ctx.message.senderInboxId,
+              ctx.conversation.id
+            );
+            await ctx.sendText(result);
+            console.log(
+              `✅ Broadcast confirmed and sent by ${ctx.message.senderInboxId}`
+            );
+          } catch (error: any) {
+            await ctx.sendText(
+              `❌ Broadcast confirmation failed: ${error.message}`
+            );
+            console.error("❌ Broadcast confirmation error:", error);
+          }
+          break;
+
+        case "broadcast_no":
+          try {
+            const { cancelBroadcast } = await import(
+              "./services/agent/tools/broadcast.js"
+            );
+            const result = await cancelBroadcast(ctx.message.senderInboxId);
+            await ctx.sendText(result);
+            console.log(
+              `🚫 Broadcast cancelled by ${ctx.message.senderInboxId}`
+            );
+          } catch (error: any) {
+            await ctx.sendText(
+              `❌ Broadcast cancellation failed: ${error.message}`
+            );
+            console.error("❌ Broadcast cancellation error:", error);
+          }
+          break;
+
+        case "broadcast_actions_yes":
+          try {
+            const { confirmBroadcastActions } = await import(
+              "./services/agent/tools/broadcast.js"
+            );
+            const result = await confirmBroadcastActions(
+              ctx.message.senderInboxId,
+              ctx.conversation.id
+            );
+            await ctx.sendText(result);
+            console.log(
+              `✅ Broadcast with actions confirmed and sent by ${ctx.message.senderInboxId}`
+            );
+          } catch (error: any) {
+            await ctx.sendText(
+              `❌ Broadcast with actions confirmation failed: ${error.message}`
+            );
+            console.error(
+              "❌ Broadcast with actions confirmation error:",
+              error
+            );
+          }
+          break;
+
+        case "broadcast_actions_no":
+          try {
+            const { cancelBroadcast } = await import(
+              "./services/agent/tools/broadcast.js"
+            );
+            const result = await cancelBroadcast(ctx.message.senderInboxId);
+            await ctx.sendText(result);
+            console.log(
+              `🚫 Broadcast with actions cancelled by ${ctx.message.senderInboxId}`
+            );
+          } catch (error: any) {
+            await ctx.sendText(
+              `❌ Broadcast with actions cancellation failed: ${error.message}`
+            );
+            console.error(
+              "❌ Broadcast with actions cancellation error:",
+              error
+            );
+          }
+          break;
+
+        case "broadcast_join_yes":
+          try {
+            const { confirmBroadcastJoin } = await import(
+              "./services/agent/tools/broadcast.js"
+            );
+            const result = await confirmBroadcastJoin(
+              ctx.message.senderInboxId,
+              ctx.conversation.id
+            );
+            await ctx.sendText(result);
+            console.log(
+              `✅ Broadcast with join instruction confirmed and sent by ${ctx.message.senderInboxId}`
+            );
+          } catch (error: any) {
+            await ctx.sendText(
+              `❌ Broadcast with join instruction confirmation failed: ${error.message}`
+            );
+            console.error(
+              "❌ Broadcast with join instruction confirmation error:",
+              error
+            );
+          }
+          break;
+
+        case "broadcast_join_no":
+          try {
+            const { cancelBroadcast } = await import(
+              "./services/agent/tools/broadcast.js"
+            );
+            const result = await cancelBroadcast(ctx.message.senderInboxId);
+            await ctx.sendText(result);
+            console.log(
+              `🚫 Broadcast with join instruction cancelled by ${ctx.message.senderInboxId}`
+            );
+          } catch (error: any) {
+            await ctx.sendText(
+              `❌ Broadcast with join instruction cancellation failed: ${error.message}`
+            );
+            console.error(
+              "❌ Broadcast with join instruction cancellation error:",
+              error
+            );
+          }
+          break;
+
         default:
           // Handle sidebar group actions with dynamic IDs
           const agentId = ctx.client.inboxId.slice(0, 8);
-          if (actionId.startsWith(`devconnect_827491_${agentId}_join_sidebar_`)) {
-            const groupId = actionId.replace(`devconnect_827491_${agentId}_join_sidebar_`, '');
+          if (
+            actionId.startsWith(`devconnect_827491_${agentId}_join_sidebar_`)
+          ) {
+            const groupId = actionId.replace(
+              `devconnect_827491_${agentId}_join_sidebar_`,
+              ""
+            );
             console.log(`🎯 User joining sidebar group: ${groupId}`);
-            const { joinSidebarGroup } = await import("./services/agent/tools/sidebarGroups.js");
-            const joinResult = await joinSidebarGroup(groupId, ctx.message.senderInboxId);
+            const { joinSidebarGroup } = await import(
+              "./services/agent/tools/sidebarGroups.js"
+            );
+            const joinResult = await joinSidebarGroup(
+              groupId,
+              ctx.message.senderInboxId
+            );
             await ctx.sendText(joinResult);
             break;
           }
-          
-          if (actionId.startsWith(`devconnect_827491_${agentId}_decline_sidebar_`)) {
-            const groupId = actionId.replace(`devconnect_827491_${agentId}_decline_sidebar_`, '');
+
+          if (
+            actionId.startsWith(`devconnect_827491_${agentId}_decline_sidebar_`)
+          ) {
+            const groupId = actionId.replace(
+              `devconnect_827491_${agentId}_decline_sidebar_`,
+              ""
+            );
             console.log(`🎯 User declining sidebar group: ${groupId}`);
-            const { declineSidebarGroup } = await import("./services/agent/tools/sidebarGroups.js");
-            const declineResult = await declineSidebarGroup(groupId, ctx.message.senderInboxId);
+            const { declineSidebarGroup } = await import(
+              "./services/agent/tools/sidebarGroups.js"
+            );
+            const declineResult = await declineSidebarGroup(
+              groupId,
+              ctx.message.senderInboxId
+            );
             await ctx.sendText(declineResult);
             break;
           }
-          
+
           await ctx.sendText("Thanks for your selection!");
       }
     });
@@ -1073,9 +1531,8 @@ Is there anything else I can help with?`,
     // Start the agent
     console.log("🚀 Starting Agent SDK agent...");
     await agent.start();
-    
-    console.log("✅ DevConnect 2025 Concierge Agent is now running!");
 
+    console.log("✅ DevConnect 2025 Concierge Agent is now running!");
   } catch (error) {
     console.error("❌ Error starting agent:", error);
     process.exit(1);
