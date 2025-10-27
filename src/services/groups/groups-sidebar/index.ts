@@ -1,4 +1,5 @@
-import type { DecodedMessage, Conversation } from "@xmtp/node-sdk";
+import { MessageContext } from "@xmtp/agent-sdk";
+import type { DecodedMessage, Conversation, Client } from "@xmtp/node-sdk";
 import {
   ActionsContent,
   ContentTypeActions,
@@ -6,7 +7,6 @@ import {
 
 import { GroupAdapter } from "@/adapters";
 import { BANKR_INBOX_ID, DEFAULT_GROUP_MEMBER_COUNT } from "@/constants";
-import { XMTPAgent } from "@/services/xmtp/xmtp-agent";
 import { XMTPServiceBase } from "@/services/xmtpServiceBase";
 import { PendingInvitation, SidebarGroup } from "./interfaces";
 
@@ -14,8 +14,8 @@ export class SidebarGroupsService extends XMTPServiceBase {
   private sidebarGroups = new Map<string, SidebarGroup>();
   private pendingInvitations = new Map<string, PendingInvitation>();
 
-  constructor(xmtpAgent: XMTPAgent) {
-    super(xmtpAgent);
+  constructor(client: Client<any>) {
+    super(client);
   }
 
   async handleSidebarRequest(
@@ -314,5 +314,83 @@ export class SidebarGroupsService extends XMTPServiceBase {
     }
 
     console.log(`🧹 Cleaned up expired sidebar group invitations`);
+  }
+
+  async handleTextCallback(
+    ctx: MessageContext<string>,
+    cleanContent: string
+  ): Promise<void> {
+    try {
+      const isGroup = ctx.isGroup();
+
+      if (isGroup && this.isSidebarRequest(cleanContent)) {
+        const groupName = this.parseSidebarCommand(cleanContent);
+        let senderAddress = (await ctx.getSenderAddress()) || "";
+        if (groupName) {
+          const sidebarResponse = await this.handleSidebarRequest(
+            groupName,
+            ctx.message,
+            ctx.conversation,
+            senderAddress
+          );
+          if (sidebarResponse && sidebarResponse.trim() !== "") {
+            await ctx.sendText(sidebarResponse);
+          }
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("Error in sidebar group text callback");
+      await ctx.sendText(
+        "Sorry, I encountered an error while processing your request. Please try again later."
+      );
+    }
+  }
+
+  async handleIntentCallback(
+    ctx: MessageContext<unknown>,
+    actionId: any
+  ): Promise<void> {
+    try {
+      // Handle sidebar group actions with dynamic IDs
+      const agentId = ctx.client.inboxId.slice(0, 8);
+      if (actionId.startsWith(`devconnect_827491_${agentId}_join_sidebar_`)) {
+        const groupId = actionId.replace(
+          `devconnect_827491_${agentId}_join_sidebar_`,
+          ""
+        );
+        console.log(`🎯 User joining sidebar group: ${groupId}`);
+        const joinResult = await this.joinSidebarGroup(
+          groupId,
+          ctx.message.senderInboxId
+        );
+        await ctx.sendText(joinResult);
+        return;
+      }
+
+      if (
+        actionId.startsWith(`devconnect_827491_${agentId}_decline_sidebar_`)
+      ) {
+        const groupId = actionId.replace(
+          `devconnect_827491_${agentId}_decline_sidebar_`,
+          ""
+        );
+        console.log(`🎯 User declining sidebar group: ${groupId}`);
+
+        const declineResult = await this.declineSidebarGroup(
+          groupId,
+          ctx.message.senderInboxId
+        );
+        await ctx.sendText(declineResult);
+        return;
+      }
+
+      await ctx.sendText("Thanks for your selection!");
+    } catch (err) {
+      console.error("Error in activity group intent callback");
+      await ctx.sendText(
+        "Sorry, I encountered an error while processing your request. Please try again later."
+      );
+    }
   }
 }

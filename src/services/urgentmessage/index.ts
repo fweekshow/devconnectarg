@@ -1,10 +1,11 @@
+import type { Client } from "@xmtp/node-sdk";
+
 import { STAFF_WALLETS } from "@/constants";
 import { XMTPServiceBase } from "@/services/xmtpServiceBase";
-import { XMTPAgent } from "@/services/xmtp/xmtp-agent";
 
 export class UrgentMessageService extends XMTPServiceBase {
-  constructor(xmtpAgent: XMTPAgent) {
-    super(xmtpAgent);
+  constructor(client: Client<any>) {
+    super(client);
   }
 
   async forwardUrgentMessage(

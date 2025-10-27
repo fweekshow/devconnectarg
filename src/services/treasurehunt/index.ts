@@ -1,3 +1,4 @@
+import { MessageContext } from "@xmtp/agent-sdk";
 import {
   RemoteAttachmentCodec,
   type RemoteAttachment,
@@ -12,9 +13,16 @@ import {
   TREASURE_HUNT_TASKS,
 } from "@/constants";
 import { XMTPServiceBase } from "@/services/xmtpServiceBase";
-import { ContentTypeActions } from "@/services/xmtp/xmtp-inline-actions/types";
+import {
+  ActionsContent,
+  ContentTypeActions,
+} from "@/services/xmtp/xmtp-inline-actions/types";
+
+import { PendingImages } from "./interfaces";
 
 export class TreasureHuntService extends XMTPServiceBase {
+  private pendingTreasureImages = new Map<string, PendingImages>();
+
   constructor(client: Client<any>) {
     super(client);
   }
@@ -27,79 +35,80 @@ export class TreasureHuntService extends XMTPServiceBase {
     groupNumber?: number;
     message: string;
   }> {
-    try {    
-        // TODO: Check database if user is already in a group
-        // const existingAssignment = await checkUserAssignment(userInboxId);
-        // if (existingAssignment) {
-        //   return { success: false, message: "You're already in a treasure hunt group!" };
-        // }
-    
-        // For now, assign to test group
-        const testGroupId = TREASURE_HUNT_GROUP_IDS[0];
-        
-        if (!testGroupId) {
+    try {
+      // TODO: Check database if user is already in a group
+      // const existingAssignment = await checkUserAssignment(userInboxId);
+      // if (existingAssignment) {
+      //   return { success: false, message: "You're already in a treasure hunt group!" };
+      // }
+
+      // For now, assign to test group
+      const testGroupId = TREASURE_HUNT_GROUP_IDS[0];
+
+      if (!testGroupId) {
+        return {
+          success: false,
+          message: "🏴‍☠️ Treasure Hunt groups not yet created. Check back soon!",
+        };
+      }
+
+      // Add user to the test group
+      try {
+        await this.client.conversations.sync();
+        const conversations = await this.client.conversations.list();
+        const group = conversations.find((c) => c.id === testGroupId);
+
+        if (!group) {
+          console.error(`❌ Test group ${testGroupId} not found`);
           return {
             success: false,
-            message: "🏴‍☠️ Treasure Hunt groups not yet created. Check back soon!",
+            message:
+              "❌ Treasure hunt group not accessible. Please contact support.",
           };
         }
-        
-        // Add user to the test group
-        try {
-          await this.client.conversations.sync();
-          const conversations = await this.client.conversations.list();
-          const group = conversations.find(c => c.id === testGroupId);
-          
-          if (!group) {
-            console.error(`❌ Test group ${testGroupId} not found`);
-            return {
-              success: false,
-              message: "❌ Treasure hunt group not accessible. Please contact support.",
-            };
-          }
-          
-          await (group as any).addMembers([userInboxId]);
-          console.log(`✅ Added user ${userInboxId} to treasure hunt test group`);
-          
-          // TODO: Get group's current progress from database
-          // const groupProgress = await getGroupProgress(testGroupId);
-          // const currentTaskIndex = groupProgress.current_task_index;
-          const currentTaskIndex = 0; // Placeholder
-          const completedTasks = 0; // Placeholder
-          
-          const currentTask = TREASURE_HUNT_TASKS[currentTaskIndex];
-          
-          // TODO: Record in database
-          // await recordParticipant(userInboxId, testGroupId);
-          
-          // Send the group's CURRENT task (not always task 1)
-          setTimeout(async () => {
-            await this.sendCurrentTaskToGroup(testGroupId);
-          }, 2000);
-          
-          // Contextual welcome message based on progress
-          const welcomeMessage = currentTaskIndex === 0 && completedTasks === 0
+
+        await (group as any).addMembers([userInboxId]);
+        console.log(`✅ Added user ${userInboxId} to treasure hunt test group`);
+
+        // TODO: Get group's current progress from database
+        // const groupProgress = await getGroupProgress(testGroupId);
+        // const currentTaskIndex = groupProgress.current_task_index;
+        const currentTaskIndex = 0; // Placeholder
+        const completedTasks = 0; // Placeholder
+
+        const currentTask = TREASURE_HUNT_TASKS[currentTaskIndex];
+
+        // TODO: Record in database
+        // await recordParticipant(userInboxId, testGroupId);
+
+        // Send the group's CURRENT task (not always task 1)
+        setTimeout(async () => {
+          await this.sendCurrentTaskToGroup(testGroupId);
+        }, 2000);
+
+        // Contextual welcome message based on progress
+        const welcomeMessage =
+          currentTaskIndex === 0 && completedTasks === 0
             ? "Welcome to the Base Hunt! You've been added to your team's group chat. Get ready to work together with your teammates as you dive into the adventure!"
             : `Welcome to the Base Hunt! You've been added to your team's group chat. Your team is currently working on Task ${currentTaskIndex + 1}: ${currentTask.title}. Jump in and help them complete it!`;
-          
+
+        return {
+          success: true,
+          groupId: testGroupId,
+          groupNumber: 1,
+          message: welcomeMessage,
+        };
+      } catch (addError: any) {
+        if (addError.message?.includes("already")) {
           return {
             success: true,
-            groupId: testGroupId,
-            groupNumber: 1,
-            message: welcomeMessage,
+            message:
+              "✅ You're already in a treasure hunt group! Check your group chat for your current challenge.",
           };
-          
-        } catch (addError: any) {
-          if (addError.message?.includes('already')) {
-            return {
-              success: true,
-              message: "✅ You're already in a treasure hunt group! Check your group chat for your current challenge.",
-            };
-          }
-          throw addError;
         }
-    
-      }  catch (error: any) {
+        throw addError;
+      }
+    } catch (error: any) {
       console.error("❌ Error assigning to treasure hunt group:", error);
       return {
         success: false,
@@ -392,6 +401,209 @@ ${currentTask.description}
     } catch (error) {
       console.error("❌ Error getting treasure hunt status:", error);
       return "❌ Failed to retrieve treasure hunt status.";
+    }
+  }
+
+  private isAttachmentMessage(contentTypeId?: string): boolean {
+    if (!contentTypeId) return false;
+    const isRemote =
+      contentTypeId.includes("remoteStaticAttachment") ||
+      contentTypeId.includes("RemoteAttachment");
+    const isInline = contentTypeId.includes("attachment") && !isRemote;
+    if (isRemote || isInline) {
+      console.log(`📸 Detected ${isRemote ? "remote" : "inline"} attachment!`);
+    }
+    return isRemote || isInline;
+  }
+
+  async handleTextCallback(
+    ctx: MessageContext<string>,
+    cleanContent: string
+  ): Promise<void> {
+    try {
+      const senderInboxId = ctx.message.senderInboxId;
+      const conversationId = ctx.conversation.id;
+      const isGroup = ctx.isGroup();
+
+      // Check for treasure hunt image submissions (mention in treasure hunt group)
+      if (
+        isGroup &&
+        cleanContent.trim() === "" &&
+        this.isTreasureHuntGroup(conversationId)
+      ) {
+        console.log(
+          `🏴‍☠️ Mention in treasure hunt group - checking Map for stored image...`
+        );
+
+        // Check the Map for the user's stored image
+        const key = `${conversationId}:${senderInboxId}`;
+        const storedImage = this.pendingTreasureImages.get(key);
+
+        console.log(
+          `🗺️ Map has ${this.pendingTreasureImages.size} pending images`
+        );
+        console.log(`🔑 Looking for key: ${key}`);
+
+        if (storedImage) {
+          const ageSeconds = (Date.now() - storedImage.timestamp) / 1000;
+          console.log(
+            `✅ Found stored image from ${ageSeconds.toFixed(1)}s ago!`
+          );
+
+          const response = await this.handleTreasureHuntImageSubmission(
+            conversationId,
+            storedImage.content
+          );
+
+          // Remove from Map (one-time use)
+          this.pendingTreasureImages.delete(key);
+          console.log(`🗑️ Removed image from Map`);
+
+          if (response && response.trim() !== "") {
+            await ctx.sendText(response);
+          }
+          return;
+        } else {
+          console.log(`❌ No stored image in Map - showing current task...`);
+
+          const status = await this.getTreasureHuntStatus(conversationId);
+          await ctx.sendText(status);
+          return;
+        }
+      }
+      return;
+    } catch (err) {
+      console.error("Error in treasure hunt text callback");
+      await ctx.sendText(
+        "Sorry, I encountered an error while processing your request. Please try again later."
+      );
+    }
+  }
+
+  async handleMessageCallback(ctx: MessageContext<unknown>): Promise<void> {
+    try {
+      const isGroup = ctx.isGroup();
+      const contentTypeId = ctx.message.contentType?.typeId;
+
+      if (this.isAttachmentMessage(contentTypeId)) {
+        if (ctx.message.senderInboxId === this.client.inboxId) {
+          return;
+        }
+        const isTreasureGroup = this.isTreasureHuntGroup(ctx.conversation.id);
+        console.log(
+          `🔍 Is group: ${isGroup}, Is treasure hunt: ${isTreasureGroup}, Group ID: ${ctx.conversation.id}`
+        );
+        if (!isGroup || !isTreasureGroup) {
+          console.log(`⏭️ Not a treasure hunt group, skipping attachment`);
+          return; // Not a treasure hunt group
+        }
+
+        const key = `${ctx.conversation.id}:${ctx.message.senderInboxId}`;
+        this.pendingTreasureImages.set(key, {
+          content: ctx.message.content,
+          messageId: ctx.message.id,
+          timestamp: Date.now(),
+        });
+        console.log(
+          `📸 Stored image for user ${ctx.message.senderInboxId.substring(0, 12)}... (waiting for mention)`
+        );
+
+        // Clean up old images (older than 2 minutes)
+        for (const [k, v] of this.pendingTreasureImages.entries()) {
+          if (Date.now() - v.timestamp > 120000) {
+            this.pendingTreasureImages.delete(k);
+          }
+        }
+        return;
+      }
+
+      return;
+    } catch (err) {
+      console.error("Error in treasure hunt message callback");
+      await ctx.sendText(
+        "Sorry, I encountered an error while processing your request. Please try again later."
+      );
+    }
+  }
+
+  async handleIntentCallback(
+    ctx: MessageContext<unknown>,
+    actionId: any
+  ): Promise<void> {
+    try {
+      switch (actionId) {
+        case "treasure_hunt":
+          // If clicked from within a treasure hunt group, just show current task
+          if (ctx.isGroup() && this.isTreasureHuntGroup(ctx.conversation.id)) {
+            console.log(
+              `🏴‍☠️ Treasure hunt button clicked in group - showing current task`
+            );
+            await this.sendCurrentTaskToGroup(ctx.conversation.id);
+            break;
+          }
+
+          // In DM - assign to group with welcome message
+          const treasureHuntResult = await this.assignToTreasureHuntGroup(
+            ctx.message.senderInboxId
+          );
+
+          const treasureHuntActionsContent: ActionsContent = {
+            id: "treasure_hunt_join_response",
+            description: `${treasureHuntResult.message}
+        
+        Is there anything else I can help with?`,
+            actions: [
+              {
+                id: "show_main_menu",
+                label: "✅ Yes",
+                style: "primary",
+              },
+              {
+                id: "end_conversation",
+                label: "❌ No",
+                style: "secondary",
+              },
+            ],
+          };
+          const treasureHuntConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
+          if (treasureHuntConversation) {
+            await (treasureHuntConversation as any).send(
+              treasureHuntActionsContent,
+              ContentTypeActions
+            );
+          }
+          break;
+
+        case "treasure_hunt_status":
+          const statusMessage = await this.getTreasureHuntStatus(
+            ctx.conversation.id
+          );
+          await ctx.sendText(statusMessage);
+          break;
+
+        case "treasure_hunt_rules":
+          await ctx.sendText(`🏴‍☠️ Treasure Hunt Rules
+
+📋 How it works:
+1️⃣ Complete 10 photo challenges with your team
+2️⃣ Send photos in this group chat to submit
+3️⃣ Rocky validates each photo with AI
+4️⃣ Pass requires YES + 60%+ confidence
+5️⃣ First team to complete all tasks wins!
+
+⭐ Most tasks worth 10 points each
+
+🎯 Work together and have fun! 🍀`);
+          break;
+      }
+    } catch (err) {
+      console.error("Error in treasure intent callback");
+      await ctx.sendText(
+        "Sorry, I encountered an error while processing your request. Please try again later."
+      );
     }
   }
 }

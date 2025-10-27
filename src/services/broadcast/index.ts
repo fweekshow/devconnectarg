@@ -1,14 +1,20 @@
-import type { ActionsContent } from "@/services/xmtp/xmtp-inline-actions/types";
+import { MessageContext } from "@xmtp/agent-sdk";
+import type { Client } from "@xmtp/node-sdk";
+
+import {
+  ContentTypeActions,
+  type ActionsContent,
+} from "@/services/xmtp/xmtp-inline-actions/types";
 import { XMTPServiceBase } from "@/services/xmtpServiceBase";
-import { XMTPAgent } from "@/services/xmtp/xmtp-agent";
+
 import { PendingBroadcast } from "./interfaces";
 
 export class BrodcastService extends XMTPServiceBase {
   private pendingBroadcasts = new Map<string, PendingBroadcast>();
   private broadcastTitle = "BASECAMP 2025";
 
-  constructor(xmtpAgent: XMTPAgent) {
-    super(xmtpAgent);
+  constructor(client: Client<any>) {
+    super(client);
   }
 
   private storePendingBroadcast(pending: PendingBroadcast) {
@@ -154,7 +160,7 @@ export class BrodcastService extends XMTPServiceBase {
     }
   }
 
-  async cancelBroadcast(senderInboxId: string): Promise<string> {
+  cancelBroadcast(senderInboxId: string): string {
     try {
       const pending = this.pendingBroadcasts.get(senderInboxId);
 
@@ -436,6 +442,172 @@ export class BrodcastService extends XMTPServiceBase {
     } catch (error: any) {
       console.error("❌ Error sending broadcast:", error);
       return "❌ Failed to send broadcast message. Please try again later.";
+    }
+  }
+
+  async handleTextCallback(
+    ctx: MessageContext<string>,
+    cleanContent: string
+  ): Promise<void> {
+    try {
+      const senderInboxId = ctx.message.senderInboxId;
+      const conversationId = ctx.conversation.id;
+      const isGroup = ctx.isGroup();
+
+      if (!isGroup && cleanContent.toLowerCase().startsWith("/broadcast ")) {
+        const broadcastMessage = cleanContent.substring(11).trim();
+        try {
+          const result = await this.previewBroadcast(
+            broadcastMessage,
+            senderInboxId,
+            conversationId
+          );
+
+          const actionsData = JSON.parse(result);
+          const broadcastConversation =
+            await ctx.client.conversations.getConversationById(conversationId);
+          if (broadcastConversation) {
+            await broadcastConversation.send(
+              actionsData.content,
+              ContentTypeActions
+            );
+            console.log(`✅ Sent broadcast preview with quick actions`);
+          }
+        } catch (broadcastError: any) {
+          await ctx.sendText(
+            `❌ Broadcast preview failed: ${broadcastError.message}`
+          );
+          console.error("❌ Broadcast error:", broadcastError);
+        }
+        return;
+      }
+    } catch (err) {
+      console.error("Error in broadcast text callback");
+      await ctx.sendText(
+        "Sorry, I encountered an error while processing your request. Please try again later."
+      );
+    }
+  }
+
+  async handleIntentCallback(
+    ctx: MessageContext<unknown>,
+    actionId: any
+  ): Promise<void> {
+    try {
+      switch (actionId) {
+        case "broadcast_yes":
+          try {
+            const result = await this.confirmBroadcast(
+              ctx.message.senderInboxId
+            );
+            await ctx.sendText(result);
+            console.log(
+              `✅ Broadcast confirmed and sent by ${ctx.message.senderInboxId}`
+            );
+          } catch (error: any) {
+            await ctx.sendText(
+              `❌ Broadcast confirmation failed: ${error.message}`
+            );
+            console.error("❌ Broadcast confirmation error:", error);
+          }
+          break;
+
+        case "broadcast_no":
+          try {
+            const result = this.cancelBroadcast(ctx.message.senderInboxId);
+            await ctx.sendText(result);
+            console.log(
+              `🚫 Broadcast cancelled by ${ctx.message.senderInboxId}`
+            );
+          } catch (error: any) {
+            await ctx.sendText(
+              `❌ Broadcast cancellation failed: ${error.message}`
+            );
+            console.error("❌ Broadcast cancellation error:", error);
+          }
+          break;
+
+        case "broadcast_actions_yes":
+          try {
+            const result = await this.confirmBroadcastActions(
+              ctx.message.senderInboxId
+            );
+            await ctx.sendText(result);
+            console.log(
+              `✅ Broadcast with actions confirmed and sent by ${ctx.message.senderInboxId}`
+            );
+          } catch (error: any) {
+            await ctx.sendText(
+              `❌ Broadcast with actions confirmation failed: ${error.message}`
+            );
+            console.error(
+              "❌ Broadcast with actions confirmation error:",
+              error
+            );
+          }
+          break;
+
+        case "broadcast_actions_no":
+          try {
+            const result = this.cancelBroadcast(ctx.message.senderInboxId);
+            await ctx.sendText(result);
+            console.log(
+              `🚫 Broadcast with actions cancelled by ${ctx.message.senderInboxId}`
+            );
+          } catch (error: any) {
+            await ctx.sendText(
+              `❌ Broadcast with actions cancellation failed: ${error.message}`
+            );
+            console.error(
+              "❌ Broadcast with actions cancellation error:",
+              error
+            );
+          }
+          break;
+
+        case "broadcast_join_yes":
+          try {
+            const result = await this.confirmBroadcastJoin(
+              ctx.message.senderInboxId
+            );
+            await ctx.sendText(result);
+            console.log(
+              `✅ Broadcast with join instruction confirmed and sent by ${ctx.message.senderInboxId}`
+            );
+          } catch (error: any) {
+            await ctx.sendText(
+              `❌ Broadcast with join instruction confirmation failed: ${error.message}`
+            );
+            console.error(
+              "❌ Broadcast with join instruction confirmation error:",
+              error
+            );
+          }
+          break;
+
+        case "broadcast_join_no":
+          try {
+            const result = this.cancelBroadcast(ctx.message.senderInboxId);
+            await ctx.sendText(result);
+            console.log(
+              `🚫 Broadcast with join instruction cancelled by ${ctx.message.senderInboxId}`
+            );
+          } catch (error: any) {
+            await ctx.sendText(
+              `❌ Broadcast with join instruction cancellation failed: ${error.message}`
+            );
+            console.error(
+              "❌ Broadcast with join instruction cancellation error:",
+              error
+            );
+          }
+          break;
+      }
+    } catch (err) {
+      console.error("Error in broadcast intent callback");
+      await ctx.sendText(
+        "Sorry, I encountered an error while processing your request. Please try again later."
+      );
     }
   }
 }

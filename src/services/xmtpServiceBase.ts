@@ -1,23 +1,15 @@
 import { base } from "viem/chains";
 import { getName } from "@coinbase/onchainkit/identity";
+import { MessageContext } from "@xmtp/agent-sdk";
 import type { Client } from "@xmtp/node-sdk";
 
-import { XMTPAgent } from "@/services/xmtp/xmtp-agent";
 import { STAFF_WALLETS } from "@/constants";
 
 export abstract class XMTPServiceBase {
   protected client: Client<any>;
 
-  constructor(xmtpAgent: XMTPAgent) {
-    if (!xmtpAgent) {
-      throw new Error("XMTPAgent instance is required.");
-    }
-
-    const client = xmtpAgent.getClient();
-    if (!client) {
-      throw new Error("XMTP client could not be initialized from XMTPAgent.");
-    }
-
+  constructor(client: Client<any>) {
+    if (!client) throw new Error("XMTP client is required.");
     this.client = client;
     console.log("✅ XMTPServiceBase initialized with XMTP client.");
   }
@@ -103,5 +95,20 @@ export abstract class XMTPServiceBase {
       console.error("❌ Error checking authorization:", err);
       return false;
     }
+  }
+
+  async handleTextCallback(
+    ctx: MessageContext<string>,
+    cleanContent: string
+  ): Promise<void> {
+    console.log("Base class Text Callback");
+  }
+
+  async handleMessageCallback(ctx: MessageContext<unknown>): Promise<void> {
+    console.log("Base class Message Callback");
+  }
+
+  async handleIntentCallback(ctx: MessageContext<unknown>,actionId:any): Promise<void> {
+    console.log("Base class Intent Callback");
   }
 }

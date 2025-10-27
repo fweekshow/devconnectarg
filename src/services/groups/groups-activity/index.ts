@@ -1,15 +1,22 @@
+import { MessageContext } from "@xmtp/agent-sdk";
+import type { Client } from "@xmtp/node-sdk";
+
 import { ENV } from "@/config";
 import {
   ACTIVITY_GROUP_MAP,
   ACTIVITY_GROUPS,
   ACTIVITY_NAMES,
 } from "@/constants";
-import { XMTPAgent } from "@/services/xmtp/xmtp-agent";
 import { XMTPServiceBase } from "@/services/xmtpServiceBase";
+import { UserAdapter } from "@/adapters/user.adapter.js";
+import {
+  ActionsContent,
+  ContentTypeActions,
+} from "@/services/xmtp/xmtp-inline-actions/types/ActionsContent.js";
 
 export class ActivityGroupsService extends XMTPServiceBase {
-  constructor(xmtpAgent: XMTPAgent) {
-    super(xmtpAgent);
+  constructor(client: Client<any>) {
+    super(client);
   }
 
   async initializeAgentInGroups(): Promise<void> {
@@ -270,5 +277,274 @@ export class ActivityGroupsService extends XMTPServiceBase {
         },
       ],
     };
+  }
+
+  async handleIntentCallback(
+    ctx: MessageContext<unknown>,
+    actionId: any
+  ): Promise<void> {
+    try {
+      switch (actionId) {
+        case "join_groups":
+          await UserAdapter.incrementActionClick(
+            ctx.message.senderInboxId,
+            "MoreGroups"
+          );
+
+          const groupSelectionActions =
+            this.generateGroupSelectionQuickActions();
+          const groupSelectionConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
+          if (groupSelectionConversation) {
+            await groupSelectionConversation.send(
+              groupSelectionActions,
+              ContentTypeActions
+            );
+          }
+          break;
+
+        case "join_base_group":
+          await UserAdapter.incrementActionClick(
+            ctx.message.senderInboxId,
+            "BaseGroup"
+          );
+          const baseGroupResult = await this.addMemberToBaseGlobalEvents(
+            ctx.message.senderInboxId
+          );
+
+          const baseGroupFollowupActionsContent: ActionsContent = {
+            id: "base_group_join_followup",
+            description: `${baseGroupResult}
+        
+        Is there anything else I can help with?`,
+            actions: [
+              {
+                id: "show_main_menu",
+                label: "✅ Yes",
+                style: "primary",
+              },
+              {
+                id: "end_conversation",
+                label: "❌ No",
+                style: "secondary",
+              },
+            ],
+          };
+          const baseConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
+          if (baseConversation) {
+            await baseConversation.send(
+              baseGroupFollowupActionsContent,
+              ContentTypeActions
+            );
+          }
+          break;
+
+        case "join_eth_group":
+          const ethGroupResult = await this.addMemberToETHGroup(
+            ctx.message.senderInboxId
+          );
+
+          const ethGroupFollowupActionsContent: ActionsContent = {
+            id: "eth_group_join_followup",
+            description: `${ethGroupResult}
+        
+        Is there anything else I can help with?`,
+            actions: [
+              {
+                id: "show_main_menu",
+                label: "✅ Yes",
+                style: "primary",
+              },
+              {
+                id: "end_conversation",
+                label: "❌ No",
+                style: "secondary",
+              },
+            ],
+          };
+          const ethConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
+          if (ethConversation) {
+            await ethConversation.send(
+              ethGroupFollowupActionsContent,
+              ContentTypeActions
+            );
+          }
+          break;
+
+        case "join_xmtp_group":
+          await UserAdapter.incrementActionClick(
+            ctx.message.senderInboxId,
+            "XMTPGroup"
+          );
+          const xmtpGroupResult = await this.addMemberToXMTPGroup(
+            ctx.message.senderInboxId
+          );
+
+          const xmtpGroupFollowupActionsContent: ActionsContent = {
+            id: "xmtp_group_join_followup",
+            description: `${xmtpGroupResult}
+        
+        Is there anything else I can help with?`,
+            actions: [
+              {
+                id: "show_main_menu",
+                label: "✅ Yes",
+                style: "primary",
+              },
+              {
+                id: "end_conversation",
+                label: "❌ No",
+                style: "secondary",
+              },
+            ],
+          };
+          const xmtpConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
+          if (xmtpConversation) {
+            await xmtpConversation.send(
+              xmtpGroupFollowupActionsContent,
+              ContentTypeActions
+            );
+          }
+          break;
+
+        // DevConnect group joining cases
+        case "join_ethcon_argentina":
+          await UserAdapter.incrementActionClick(
+            ctx.message.senderInboxId,
+            "EthconArgentina"
+          );
+          const ethconArgResult = await this.addMemberToActivityGroup(
+            "ethcon_argentina",
+            ctx.message.senderInboxId
+          );
+
+          const ethconArgFollowupActionsContent: ActionsContent = {
+            id: "ethcon_argentina_join_followup",
+            description: `${ethconArgResult}
+        
+        Is there anything else I can help with?`,
+            actions: [
+              {
+                id: "show_main_menu",
+                label: "✅ Yes",
+                style: "primary",
+              },
+              {
+                id: "end_conversation",
+                label: "❌ No",
+                style: "secondary",
+              },
+            ],
+          };
+          const ethconConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
+          if (ethconConversation) {
+            await ethconConversation.send(
+              ethconArgFollowupActionsContent,
+              ContentTypeActions
+            );
+          }
+          break;
+
+        case "join_staking_summit":
+          await UserAdapter.incrementActionClick(
+            ctx.message.senderInboxId,
+            "StakingSummit"
+          );
+          const stakingSummitResult = await this.addMemberToActivityGroup(
+            "staking_summit",
+            ctx.message.senderInboxId
+          );
+
+          const stakingSummitFollowupActionsContent: ActionsContent = {
+            id: "staking_summit_join_followup",
+            description: `${stakingSummitResult}
+        
+        Is there anything else I can help with?`,
+            actions: [
+              {
+                id: "show_main_menu",
+                label: "✅ Yes",
+                style: "primary",
+              },
+              {
+                id: "end_conversation",
+                label: "❌ No",
+                style: "secondary",
+              },
+            ],
+          };
+          const stakingConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
+          if (stakingConversation) {
+            await stakingConversation.send(
+              stakingSummitFollowupActionsContent,
+              ContentTypeActions
+            );
+          }
+          break;
+
+        case "join_builder_nights":
+          await UserAdapter.incrementActionClick(
+            ctx.message.senderInboxId,
+            "BuilderNights"
+          );
+
+          const builderNightsResult = await this.addMemberToActivityGroup(
+            "builder_nights",
+            ctx.message.senderInboxId
+          );
+
+          const builderNightsFollowupActionsContent: ActionsContent = {
+            id: "builder_nights_join_followup",
+            description: `${builderNightsResult}
+        
+        Is there anything else I can help with?`,
+            actions: [
+              {
+                id: "show_main_menu",
+                label: "✅ Yes",
+                style: "primary",
+              },
+              {
+                id: "end_conversation",
+                label: "❌ No",
+                style: "secondary",
+              },
+            ],
+          };
+          const builderConversation =
+            await ctx.client.conversations.getConversationById(
+              ctx.conversation.id
+            );
+          if (builderConversation) {
+            await builderConversation.send(
+              builderNightsFollowupActionsContent,
+              ContentTypeActions
+            );
+          }
+          break;
+      }
+    } catch (err) {
+      console.error("Error in activity group intent callback");
+      await ctx.sendText(
+        "Sorry, I encountered an error while processing your request. Please try again later."
+      );
+    }
   }
 }
