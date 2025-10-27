@@ -9,7 +9,7 @@ export class ConversationMemoryService {
     userMessage: string,
     botResponse: string
   ): void {
-    const history = this.conversationHistory.get(senderInboxId) || [];
+    const history = ConversationMemoryService.conversationHistory.get(senderInboxId) || [];
 
     history.push({
       userMessage,
@@ -22,11 +22,11 @@ export class ConversationMemoryService {
       history.shift();
     }
 
-    this.conversationHistory.set(senderInboxId, history);
+    ConversationMemoryService.conversationHistory.set(senderInboxId, history);
   }
 
   static getContext(senderInboxId: string): string {
-    const history = this.conversationHistory.get(senderInboxId) || [];
+    const history = ConversationMemoryService.conversationHistory.get(senderInboxId) || [];
 
     if (history.length === 0) return "";
 
@@ -40,22 +40,22 @@ export class ConversationMemoryService {
   static cleanup(): void {
     const cutoff = new Date(Date.now() - EXPIRY_MS);
 
-    for (const [inboxId, history] of this.conversationHistory.entries()) {
+    for (const [inboxId, history] of ConversationMemoryService.conversationHistory.entries()) {
       const recent = history.filter((entry) => entry.timestamp > cutoff);
 
       if (recent.length === 0) {
-        this.conversationHistory.delete(inboxId);
+        ConversationMemoryService.conversationHistory.delete(inboxId);
       } else {
-        this.conversationHistory.set(inboxId, recent);
+        ConversationMemoryService.conversationHistory.set(inboxId, recent);
       }
     }
   }
 
   static getHistory(senderInboxId: string): ConversationEntry[] {
-    return this.conversationHistory.get(senderInboxId) || [];
+    return ConversationMemoryService.conversationHistory.get(senderInboxId) || [];
   }
 
   static clearAll(): void {
-    this.conversationHistory.clear();
+    ConversationMemoryService.conversationHistory.clear();
   }
 }
