@@ -11,7 +11,7 @@ import { PendingBroadcast } from "./interfaces";
 
 export class BrodcastService extends XMTPServiceBase {
   private pendingBroadcasts = new Map<string, PendingBroadcast>();
-  private broadcastTitle = "BASECAMP 2025";
+  private broadcastTitle = "DEVCONNECT 2025";
 
   constructor(client: Client<any>) {
     super(client);
