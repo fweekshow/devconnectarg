@@ -142,21 +142,39 @@ export class TextCallbackHandler implements ICallbackHandler {
           console.log(`🤖 Agent Response: "${response}"`);
           console.log(`🔍 Response length: ${response.length} chars`);
           // Check if AI is responding to a greeting or giving a generic "how can I help" response
-          const GENERIC_MESSAGE_DETECTION_PROMPT = `
-         You are a message classifier. Your task is to determine whether a given message is a *generic greeting or helper prompt* that lacks specific context or information.
+          const GENERIC_MESSAGE_DETECTION_PROMPT = `You are a message classifier for a chatbot system. Your task is to determine if the chatbot's response is GENERIC (just a greeting/offer to help) or SPECIFIC (actual useful information).
 
-A message is considered "generic" if:
-- It sounds like a standard greeting, introduction, or offer to help.
-- It does not reference any user-specific context, task, or content.
-- It contains phrases such as “How can I help?”, “What can I do for you?”, “Let me know”, “I’m here to assist”, “How’s your day?”, etc.
-- It is short and non-specific (under ~300 characters).
-- It does not contain detailed instructions, data, or direct answers.
+A response is GENERIC if it:
+- Is just introducing itself ("Hi! I'm Rocky", "I'm your event buddy")
+- Only offers to help without providing info ("How can I help?", "What can I do for you?", "Let me know", "I'm here to assist")
+- Is a plain greeting response ("Hello!", "Hey there!", "Hi!")
+- Lists what it CAN do but doesn't actually DO anything
+- Contains phrases like: "How can I help", "What would you like to know", "I'm here to help", "Here's what I can help with"
+- Does NOT contain specific event information, schedules, dates, or actionable content
+- Is under 300 characters and lacks substance
 
-Return only one word:
-- "YES" — if the message is generic.
-- "NO" — if the message is specific or contains meaningful, task-related content.
+A response is SPECIFIC if it:
+- Provides actual schedule information, event details, dates, times, or locations
+- Answers a question with real data
+- Contains URLs, event names, or detailed information
+- Takes a specific action (sets reminder, joins group, etc.)
+- Has meaningful content beyond just offering help
 
-Message to Classify: ${response}
+Examples of GENERIC responses:
+- "Hi! I'm Rocky, your DevConnect concierge. How can I help you today?"
+- "Hello! What can I do for you?"
+- "I'm here to assist with schedule, wifi, and more. What would you like to know?"
+
+Examples of SPECIFIC responses:
+- "ETH Day is on Monday, November 17, 2025 at La Rural"
+- "I've set a reminder for tomorrow at 3pm"
+- "The wifi password is devconnect2025"
+
+Return ONLY one word:
+"YES" if the response is GENERIC (should show menu instead)
+"NO" if the response is SPECIFIC (keep it as-is)
+
+Response to classify: ${response}
 `;
           const isGeneric = await this.aiAgent?.runWithPromt(
             GENERIC_MESSAGE_DETECTION_PROMPT
