@@ -462,8 +462,14 @@ export class BrodcastService extends XMTPServiceBase {
             senderInboxId,
             conversationId
           );
-
-          const actionsData = JSON.parse(result);
+          let actionsData:any;
+          try{
+            actionsData = JSON.parse(result);
+          }
+          catch(err){
+            await ctx.sendText(result)
+            return true;
+          }
           const broadcastConversation =
           await ctx.client.conversations.getConversationById(conversationId);
           if (broadcastConversation) {
@@ -476,7 +482,7 @@ export class BrodcastService extends XMTPServiceBase {
           }
         } catch (broadcastError: any) {
           await ctx.sendText(
-            `❌ Broadcast preview failed: ${JSON.stringify(broadcastError.message)}`
+            `❌ Broadcast preview failed: ${broadcastError.message}`
           );
           console.error("❌ Broadcast error:", broadcastError);
           return true
