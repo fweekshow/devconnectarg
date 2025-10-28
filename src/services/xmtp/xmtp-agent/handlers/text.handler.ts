@@ -12,12 +12,14 @@ import {
 
 import { ICallbackHandler } from "../interfaces";
 import { CallbackServices } from "../callbackServices.type";
+import { DynamicGroupsService } from "@/services/groups/groups-dynamic";
 
 export class TextCallbackHandler implements ICallbackHandler {
   private aiAgent: AIAgent | null = null;
   constructor(
     private agent: Agent,
-    private services: CallbackServices[]
+    private services: CallbackServices[],
+    private dynamicGroupsService: DynamicGroupsService
   ) {
     this.aiAgent = new AIAgent();
   }
@@ -300,25 +302,46 @@ Response to classify: ${response}
               );
             }
           } else {
-            // Regular text response with follow-up actions
-            const followupActionsContent: ActionsContent = {
-              id: "response_followup_actions",
-              description: `${response}
+            // Check if there's a relevant dynamic group for this conversation
+            console.log(`🔍 Checking for relevant dynamic group...`);
+            const relevantGroup = await this.dynamicGroupsService.detectRelevantGroup(
+              cleanContent,
+              response
+            );
+
+            let followupActionsContent: ActionsContent;
+            
+            if (relevantGroup) {
+              // Show group join action instead of generic followup
+              console.log(`🎯 Relevant group detected: ${relevantGroup}`);
+              followupActionsContent = {
+                ...this.dynamicGroupsService.generateGroupJoinActions(relevantGroup),
+                description: `${response}
+
+${this.dynamicGroupsService.generateGroupJoinActions(relevantGroup).description}`
+              };
+            } else {
+              // No relevant group - show generic followup
+              console.log(`📝 No relevant group - showing generic followup`);
+              followupActionsContent = {
+                id: "response_followup_actions",
+                description: `${response}
         
 Is there anything else I can help with?`,
-              actions: [
-                {
-                  id: "show_main_menu",
-                  label: "✅ Yes",
-                  style: "primary",
-                },
-                {
-                  id: "end_conversation",
-                  label: "❌ No",
-                  style: "secondary",
-                },
-              ],
-            };
+                actions: [
+                  {
+                    id: "show_main_menu",
+                    label: "✅ Yes",
+                    style: "primary",
+                  },
+                  {
+                    id: "end_conversation",
+                    label: "❌ No",
+                    style: "secondary",
+                  },
+                ],
+              };
+            }
 
             const followupConversation =
               await ctx.client.conversations.getConversationById(
@@ -329,7 +352,7 @@ Is there anything else I can help with?`,
                 followupActionsContent,
                 ContentTypeActions
               );
-              console.log(`✅ Sent response with follow-up actions`);
+              console.log(`✅ Sent response with ${relevantGroup ? 'group join' : 'generic'} follow-up actions`);
             }
 
             ConversationMemoryService.add(
