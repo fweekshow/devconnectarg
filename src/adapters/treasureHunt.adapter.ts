@@ -64,13 +64,17 @@ export class TreasureHuntAdapter {
 
   static async getTasks(): Promise<TreasureHuntTask[]> {
     const result = await db.query(
-      "SELECT id, task_index, title FROM treasure_hunt_tasks ORDER BY task_index"
+      "SELECT * FROM treasure_hunt_tasks ORDER BY task_index"
     );
 
     return result.rows.map((task) => ({
       id: task.id,
       taskIndex: task.task_index,
       title: task.title,
+      description: task.description,
+      validationPrompt: task.validation_prompt,
+      hint: task.hint,
+      points: task.points,
     }));
   }
 }
