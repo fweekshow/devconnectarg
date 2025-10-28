@@ -319,10 +319,9 @@ export class SidebarGroupsService extends XMTPServiceBase {
   async handleTextCallback(
     ctx: MessageContext<string>,
     cleanContent: string
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       const isGroup = ctx.isGroup();
-
       if (isGroup && this.isSidebarRequest(cleanContent)) {
         const groupName = this.parseSidebarCommand(cleanContent);
         let senderAddress = (await ctx.getSenderAddress()) || "";
@@ -336,21 +335,23 @@ export class SidebarGroupsService extends XMTPServiceBase {
           if (sidebarResponse && sidebarResponse.trim() !== "") {
             await ctx.sendText(sidebarResponse);
           }
-          return;
+          return true;
         }
       }
+      return false
     } catch (err) {
       console.error("Error in sidebar group text callback");
       await ctx.sendText(
         "Sorry, I encountered an error while processing your request. Please try again later."
       );
+      return true
     }
   }
 
   async handleIntentCallback(
     ctx: MessageContext<unknown>,
     actionId: any
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       // Handle sidebar group actions with dynamic IDs
       const agentId = ctx.client.inboxId.slice(0, 8);
@@ -365,7 +366,7 @@ export class SidebarGroupsService extends XMTPServiceBase {
           ctx.message.senderInboxId
         );
         await ctx.sendText(joinResult);
-        return;
+        return true;
       }
 
       if (
@@ -382,15 +383,17 @@ export class SidebarGroupsService extends XMTPServiceBase {
           ctx.message.senderInboxId
         );
         await ctx.sendText(declineResult);
-        return;
+        return true;
       }
 
       await ctx.sendText("Thanks for your selection!");
+      return true
     } catch (err) {
       console.error("Error in activity group intent callback");
       await ctx.sendText(
         "Sorry, I encountered an error while processing your request. Please try again later."
       );
+      return true
     }
   }
 }

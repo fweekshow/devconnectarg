@@ -100,15 +100,21 @@ export abstract class XMTPServiceBase {
   async handleTextCallback(
     ctx: MessageContext<string>,
     cleanContent: string
-  ): Promise<void> {
+  ): Promise<boolean> {
     console.log("Base class Text Callback");
+    return false;
   }
 
-  async handleMessageCallback(ctx: MessageContext<unknown>): Promise<void> {
+  async handleMessageCallback(ctx: MessageContext<unknown>): Promise<boolean> {
     console.log("Base class Message Callback");
+    return false;
   }
 
-  async handleIntentCallback(ctx: MessageContext<unknown>,actionId:any): Promise<void> {
+  async handleIntentCallback(
+    ctx: MessageContext<unknown>,
+    actionId: any
+  ): Promise<boolean> {
     console.log("Base class Intent Callback");
+    return false;
   }
 }

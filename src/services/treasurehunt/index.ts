@@ -419,7 +419,7 @@ ${currentTask.description}
   async handleTextCallback(
     ctx: MessageContext<string>,
     cleanContent: string
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       const senderInboxId = ctx.message.senderInboxId;
       const conversationId = ctx.conversation.id;
@@ -461,33 +461,34 @@ ${currentTask.description}
 
           if (response && response.trim() !== "") {
             await ctx.sendText(response);
+            return true;
           }
-          return;
         } else {
           console.log(`❌ No stored image in Map - showing current task...`);
 
           const status = await this.getTreasureHuntStatus(conversationId);
           await ctx.sendText(status);
-          return;
+          return true;
         }
       }
-      return;
+      return false;
     } catch (err) {
       console.error("Error in treasure hunt text callback");
       await ctx.sendText(
         "Sorry, I encountered an error while processing your request. Please try again later."
       );
+      return true;
     }
   }
 
-  async handleMessageCallback(ctx: MessageContext<unknown>): Promise<void> {
+  async handleMessageCallback(ctx: MessageContext<unknown>): Promise<boolean> {
     try {
       const isGroup = ctx.isGroup();
       const contentTypeId = ctx.message.contentType?.typeId;
 
       if (this.isAttachmentMessage(contentTypeId)) {
         if (ctx.message.senderInboxId === this.client.inboxId) {
-          return;
+          return true;
         }
         const isTreasureGroup = this.isTreasureHuntGroup(ctx.conversation.id);
         console.log(
@@ -495,7 +496,7 @@ ${currentTask.description}
         );
         if (!isGroup || !isTreasureGroup) {
           console.log(`⏭️ Not a treasure hunt group, skipping attachment`);
-          return; // Not a treasure hunt group
+          return false; // Not a treasure hunt group
         }
 
         const key = `${ctx.conversation.id}:${ctx.message.senderInboxId}`;
@@ -514,22 +515,23 @@ ${currentTask.description}
             this.pendingTreasureImages.delete(k);
           }
         }
-        return;
+        return false;
       }
 
-      return;
+      return false;
     } catch (err) {
       console.error("Error in treasure hunt message callback");
       await ctx.sendText(
         "Sorry, I encountered an error while processing your request. Please try again later."
       );
+      return true;
     }
   }
 
   async handleIntentCallback(
     ctx: MessageContext<unknown>,
     actionId: any
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       switch (actionId) {
         case "treasure_hunt":
@@ -539,7 +541,7 @@ ${currentTask.description}
               `🏴‍☠️ Treasure hunt button clicked in group - showing current task`
             );
             await this.sendCurrentTaskToGroup(ctx.conversation.id);
-            break;
+            return true;
           }
 
           // In DM - assign to group with welcome message
@@ -575,14 +577,14 @@ ${currentTask.description}
               ContentTypeActions
             );
           }
-          break;
+          return true;
 
         case "treasure_hunt_status":
           const statusMessage = await this.getTreasureHuntStatus(
             ctx.conversation.id
           );
           await ctx.sendText(statusMessage);
-          break;
+          return true;
 
         case "treasure_hunt_rules":
           await ctx.sendText(`🏴‍☠️ Treasure Hunt Rules
@@ -597,13 +599,15 @@ ${currentTask.description}
 ⭐ Most tasks worth 10 points each
 
 🎯 Work together and have fun! 🍀`);
-          break;
+          return true;
       }
+      return false;
     } catch (err) {
       console.error("Error in treasure intent callback");
       await ctx.sendText(
         "Sorry, I encountered an error while processing your request. Please try again later."
       );
+      return true;
     }
   }
 }

@@ -82,7 +82,7 @@ export class MessageCallbackHandler implements ICallbackHandler {
                   ContentTypeActions
                 );
               }
-              break;
+              return;
 
             case "show_main_menu":
               const mainMenuActionsContent: ActionsContent = {
@@ -166,7 +166,7 @@ export class MessageCallbackHandler implements ICallbackHandler {
                   `❌ Could not find conversation ${ctx.conversation.id}`
                 );
               }
-              break;
+              return;
 
             case "wifi":
               await UserAdapter.incrementActionClick(
@@ -205,7 +205,7 @@ export class MessageCallbackHandler implements ICallbackHandler {
                   ContentTypeActions
                 );
               }
-              break;
+              return;
 
             case "event_logistics":
               await UserAdapter.incrementActionClick(
@@ -251,7 +251,7 @@ export class MessageCallbackHandler implements ICallbackHandler {
                   ContentTypeActions
                 );
               }
-              break;
+              return;
 
             case "concierge_support":
               await UserAdapter.incrementActionClick(
@@ -290,22 +290,23 @@ export class MessageCallbackHandler implements ICallbackHandler {
                   ContentTypeActions
                 );
               }
-              break;
+              return;
 
             case "end_conversation":
               await ctx.sendText(
                 "Great! Message me 👋 if you want to view the option menu again!"
               );
-              break;
+              return;
           }
         }
-
+        let callbackHandled = false;
         for (const service of this.services) {
           if (notIntent) {
-            await service.handleMessageCallback(ctx);
+            callbackHandled = await service.handleMessageCallback(ctx);
           } else if (actionId) {
-            await service.handleIntentCallback(ctx, actionId);
+            callbackHandled = await service.handleIntentCallback(ctx, actionId);
           }
+          if(callbackHandled) return;
         }
       } catch (err) {
         console.error("❌ Error processing message:", err);

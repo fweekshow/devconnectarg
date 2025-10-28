@@ -448,7 +448,7 @@ export class BrodcastService extends XMTPServiceBase {
   async handleTextCallback(
     ctx: MessageContext<string>,
     cleanContent: string
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       const senderInboxId = ctx.message.senderInboxId;
       const conversationId = ctx.conversation.id;
@@ -465,34 +465,38 @@ export class BrodcastService extends XMTPServiceBase {
 
           const actionsData = JSON.parse(result);
           const broadcastConversation =
-            await ctx.client.conversations.getConversationById(conversationId);
+          await ctx.client.conversations.getConversationById(conversationId);
           if (broadcastConversation) {
             await broadcastConversation.send(
               actionsData.content,
               ContentTypeActions
             );
             console.log(`✅ Sent broadcast preview with quick actions`);
+            return true
           }
         } catch (broadcastError: any) {
           await ctx.sendText(
-            `❌ Broadcast preview failed: ${broadcastError.message}`
+            `❌ Broadcast preview failed: ${JSON.stringify(broadcastError.message)}`
           );
           console.error("❌ Broadcast error:", broadcastError);
+          return true
         }
-        return;
+        return false;
       }
+      return false
     } catch (err) {
       console.error("Error in broadcast text callback");
       await ctx.sendText(
         "Sorry, I encountered an error while processing your request. Please try again later."
       );
+      return true
     }
   }
 
   async handleIntentCallback(
     ctx: MessageContext<unknown>,
     actionId: any
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       switch (actionId) {
         case "broadcast_yes":
@@ -510,7 +514,7 @@ export class BrodcastService extends XMTPServiceBase {
             );
             console.error("❌ Broadcast confirmation error:", error);
           }
-          break;
+          return true
 
         case "broadcast_no":
           try {
@@ -525,7 +529,7 @@ export class BrodcastService extends XMTPServiceBase {
             );
             console.error("❌ Broadcast cancellation error:", error);
           }
-          break;
+          return true;
 
         case "broadcast_actions_yes":
           try {
@@ -545,7 +549,7 @@ export class BrodcastService extends XMTPServiceBase {
               error
             );
           }
-          break;
+          return true;
 
         case "broadcast_actions_no":
           try {
@@ -563,7 +567,7 @@ export class BrodcastService extends XMTPServiceBase {
               error
             );
           }
-          break;
+          return true;
 
         case "broadcast_join_yes":
           try {
@@ -583,7 +587,7 @@ export class BrodcastService extends XMTPServiceBase {
               error
             );
           }
-          break;
+          return true;
 
         case "broadcast_join_no":
           try {
@@ -601,13 +605,15 @@ export class BrodcastService extends XMTPServiceBase {
               error
             );
           }
-          break;
+          return true;
       }
+      return false
     } catch (err) {
       console.error("Error in broadcast intent callback");
       await ctx.sendText(
         "Sorry, I encountered an error while processing your request. Please try again later."
       );
+      return true
     }
   }
 }

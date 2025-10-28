@@ -282,7 +282,7 @@ export class ActivityGroupsService extends XMTPServiceBase {
   async handleIntentCallback(
     ctx: MessageContext<unknown>,
     actionId: any
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       switch (actionId) {
         case "join_groups":
@@ -303,7 +303,7 @@ export class ActivityGroupsService extends XMTPServiceBase {
               ContentTypeActions
             );
           }
-          break;
+          return true;
 
         case "join_base_group":
           await UserAdapter.incrementActionClick(
@@ -342,7 +342,7 @@ export class ActivityGroupsService extends XMTPServiceBase {
               ContentTypeActions
             );
           }
-          break;
+          return true;
 
         case "join_eth_group":
           const ethGroupResult = await this.addMemberToETHGroup(
@@ -377,7 +377,7 @@ export class ActivityGroupsService extends XMTPServiceBase {
               ContentTypeActions
             );
           }
-          break;
+          return true;
 
         case "join_xmtp_group":
           await UserAdapter.incrementActionClick(
@@ -416,7 +416,7 @@ export class ActivityGroupsService extends XMTPServiceBase {
               ContentTypeActions
             );
           }
-          break;
+          return true;
 
         // DevConnect group joining cases
         case "join_ethcon_argentina":
@@ -457,7 +457,7 @@ export class ActivityGroupsService extends XMTPServiceBase {
               ContentTypeActions
             );
           }
-          break;
+          return true;
 
         case "join_staking_summit":
           await UserAdapter.incrementActionClick(
@@ -497,7 +497,7 @@ export class ActivityGroupsService extends XMTPServiceBase {
               ContentTypeActions
             );
           }
-          break;
+          return true;
 
         case "join_builder_nights":
           await UserAdapter.incrementActionClick(
@@ -538,13 +538,15 @@ export class ActivityGroupsService extends XMTPServiceBase {
               ContentTypeActions
             );
           }
-          break;
+          return true;
       }
+      return false;
     } catch (err) {
       console.error("Error in activity group intent callback");
       await ctx.sendText(
         "Sorry, I encountered an error while processing your request. Please try again later."
       );
+      return true;
     }
   }
 }
