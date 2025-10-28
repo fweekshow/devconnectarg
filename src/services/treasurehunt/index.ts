@@ -359,7 +359,7 @@ ${task.description}
       // TODO: Get current task index from database
       const currentTaskIndex = 0; // Placeholder
 
-      const taskAction = this.generateTaskSubmissionAction(currentTaskIndex);
+      const taskAction = await this.generateTaskSubmissionAction(currentTaskIndex);
       if (!taskAction) {
         console.error("❌ Failed to generate task action");
         return;
