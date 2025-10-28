@@ -116,9 +116,10 @@ export class TextCallbackHandler implements ICallbackHandler {
           inboxId: senderInboxId,
           walletAddress: senderAddress,
         });
-
+        let callbackHandled = false;
         for (const service of this.services) {
-          await service.handleTextCallback(ctx, cleanContent);
+          callbackHandled = await service.handleTextCallback(ctx, cleanContent);
+          if(callbackHandled) return;
         }
 
         // Get conversation context for this user
@@ -140,29 +141,28 @@ export class TextCallbackHandler implements ICallbackHandler {
           // Log the agent's response
           console.log(`🤖 Agent Response: "${response}"`);
           console.log(`🔍 Response length: ${response.length} chars`);
-
           // Check if AI is responding to a greeting or giving a generic "how can I help" response
-          const lowerResponse = response.toLowerCase();
-          const hasSchedule = response.includes("Schedule");
-          const hasWifi = response.includes("Wifi");
-          const hasLogistics = response.includes("Event Logistics");
+          const GENERIC_MESSAGE_DETECTION_PROMPT = `
+         You are a message classifier. Your task is to determine whether a given message is a *generic greeting or helper prompt* that lacks specific context or information.
 
-          // Detect generic greeting responses that should use ShowMenu tool instead
-          const isGenericGreeting =
-            (lowerResponse.includes("how can i assist") ||
-              lowerResponse.includes("how can i help") ||
-              lowerResponse.includes("what can i help") ||
-              lowerResponse.includes("let me know")) &&
-            response.length < 250; // Short generic response
+A message is considered "generic" if:
+- It sounds like a standard greeting, introduction, or offer to help.
+- It does not reference any user-specific context, task, or content.
+- It contains phrases such as “How can I help?”, “What can I do for you?”, “Let me know”, “I’m here to assist”, “How’s your day?”, etc.
+- It is short and non-specific (under ~300 characters).
+- It does not contain detailed instructions, data, or direct answers.
 
-          console.log(
-            `🔍 Menu detection - Schedule: ${hasSchedule}, Wifi: ${hasWifi}, Logistics: ${hasLogistics}, GenericGreeting: ${isGenericGreeting}`
+Return only one word:
+- "YES" — if the message is generic.
+- "NO" — if the message is specific or contains meaningful, task-related content.
+
+Message to Classify: ${response}
+`;
+          const isGeneric = await this.aiAgent?.runWithPromt(
+            GENERIC_MESSAGE_DETECTION_PROMPT
           );
 
-          const isListingMenu =
-            (hasSchedule && hasWifi && hasLogistics) || isGenericGreeting;
-
-          if (isListingMenu) {
+          if (isGeneric?.toLowerCase().includes("yes")) {
             console.warn(
               "⚠️ AI tried to list menu in text instead of using ShowMenu tool!"
             );
