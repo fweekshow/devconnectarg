@@ -6,6 +6,7 @@ import {
 } from "@/services/xmtp/xmtp-inline-actions/types";
 
 import { GroupAdapter } from "@/adapters";
+import { ENV } from "@/config";
 import { BANKR_INBOX_ID, DEFAULT_GROUP_MEMBER_COUNT } from "@/constants";
 import { XMTPServiceBase } from "@/services/xmtpServiceBase";
 import { PendingInvitation, SidebarGroup } from "./interfaces";
@@ -286,12 +287,17 @@ export class SidebarGroupsService extends XMTPServiceBase {
 
   isSidebarRequest(content: string): boolean {
     const lowerContent = content.toLowerCase().trim();
+    const handles = ENV.MENTION_HANDLES.split(",").map((h) => h.trim());
+    const mentionMatches = handles.some(
+      (handle) =>
+        lowerContent.includes(`@${handle} sidebar`) ||
+        lowerContent.includes(`${handle} sidebar`)
+    );
     return (
-      lowerContent.includes("@devconnectarg.base.eth sidebar") ||
-      lowerContent.includes("@devconnectarg sidebar") ||
-      lowerContent.includes(".base.eth sidebar") || // Handles cleaned content after mention removal
+      mentionMatches ||
+      lowerContent.includes(".base.eth sidebar") ||
       lowerContent.startsWith("sidebar") ||
-      /^sidebar\s+/i.test(content.trim())
+      /^sidebar\s+/i.test(lowerContent)
     );
   }
 
@@ -338,13 +344,13 @@ export class SidebarGroupsService extends XMTPServiceBase {
           return true;
         }
       }
-      return false
+      return false;
     } catch (err) {
       console.error("Error in sidebar group text callback");
       await ctx.sendText(
         "Sorry, I encountered an error while processing your request. Please try again later."
       );
-      return true
+      return true;
     }
   }
 
@@ -387,13 +393,13 @@ export class SidebarGroupsService extends XMTPServiceBase {
       }
 
       await ctx.sendText("Thanks for your selection!");
-      return true
+      return true;
     } catch (err) {
       console.error("Error in activity group intent callback");
       await ctx.sendText(
         "Sorry, I encountered an error while processing your request. Please try again later."
       );
-      return true
+      return true;
     }
   }
 }
