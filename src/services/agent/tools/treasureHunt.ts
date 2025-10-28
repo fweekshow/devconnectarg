@@ -19,15 +19,23 @@ export function setTreasureHuntClient(client: Client<any>) {
 // TREASURE HUNT CONFIGURATION
 export const TREASURE_HUNT_CONFIG = {
   totalGroups: 20,
-  totalTasks: 10,
+  totalTasks: 11,
   maxMembersPerGroup: 10,
   minConfidenceThreshold: 60, // 60% confidence required for validation
 };
 
-// Task definitions - 10 challenges for the treasure hunt
+// Task definitions - 11 challenges for the treasure hunt
 export const TREASURE_HUNT_TASKS = [
   {
     index: 0,
+    title: "Find the A0X JesseXBT",
+    description: "Find the yellow and blue artistic A0X logo that looks like Jesse Pollak. Take a photo of this art image.",
+    validationPrompt: "Does this image show a yellow and blue artistic logo or artwork? Look for an art piece with geometric yellow and blue shapes that resembles a stylized face or portrait.",
+    hint: "Look for the vibrant yellow and blue A0X art around the venue!",
+    points: 10,
+  },
+  {
+    index: 1,
     title: "The Dog Walker Riddle",
     description: "In this city, some walk for two and some for twenty. Find the one whose hands are full of leashes.",
     validationPrompt: "Does this image show a person walking multiple dogs with leashes? Look for someone walking several dogs at once.",
@@ -35,7 +43,7 @@ export const TREASURE_HUNT_TASKS = [
     points: 10,
   },
   {
-    index: 1,
+    index: 2,
     title: "Find a Fork",
     description: "Take a photo of a fork",
     validationPrompt: "Does this image clearly show a fork? Respond with YES or NO.",
@@ -43,7 +51,7 @@ export const TREASURE_HUNT_TASKS = [
     points: 10,
   },
   {
-    index: 2,
+    index: 3,
     title: "Find a Cup",
     description: "Take a photo of a cup or mug",
     validationPrompt: "Is this a photo of a cup, mug, or drinking vessel? Respond with YES or NO.",
@@ -51,7 +59,7 @@ export const TREASURE_HUNT_TASKS = [
     points: 10,
   },
   {
-    index: 3,
+    index: 4,
     title: "Find a Pen",
     description: "Take a photo of a pen or pencil",
     validationPrompt: "Does this image show a pen or pencil? Respond with YES or NO.",
@@ -59,7 +67,7 @@ export const TREASURE_HUNT_TASKS = [
     points: 10,
   },
   {
-    index: 4,
+    index: 5,
     title: "Find a Book",
     description: "Take a photo of a book",
     validationPrompt: "Is this a photo showing a book? Respond with YES or NO.",
@@ -67,7 +75,7 @@ export const TREASURE_HUNT_TASKS = [
     points: 10,
   },
   {
-    index: 5,
+    index: 6,
     title: "Find a Shoe",
     description: "Take a photo of a shoe",
     validationPrompt: "Does this image show a shoe or sneaker? Respond with YES or NO.",
@@ -75,7 +83,7 @@ export const TREASURE_HUNT_TASKS = [
     points: 10,
   },
   {
-    index: 6,
+    index: 7,
     title: "Find a Pillow",
     description: "Take a photo of a pillow",
     validationPrompt: "Is this a photo of a pillow or cushion? Respond with YES or NO.",
@@ -83,7 +91,7 @@ export const TREASURE_HUNT_TASKS = [
     points: 10,
   },
   {
-    index: 7,
+    index: 8,
     title: "Find a Towel",
     description: "Take a photo of a towel",
     validationPrompt: "Does this image show a towel? Respond with YES or NO.",
@@ -91,7 +99,7 @@ export const TREASURE_HUNT_TASKS = [
     points: 10,
   },
   {
-    index: 8,
+    index: 9,
     title: "Find a Bottle",
     description: "Take a photo of any bottle",
     validationPrompt: "Does this image show a bottle? Respond with YES or NO.",
@@ -99,7 +107,7 @@ export const TREASURE_HUNT_TASKS = [
     points: 10,
   },
   {
-    index: 9,
+    index: 10,
     title: "Find a Phone Charger",
     description: "Take a photo of a phone charger",
     validationPrompt: "Is this a photo of a phone charger or charging cable? Respond with YES or NO.",
@@ -110,11 +118,13 @@ export const TREASURE_HUNT_TASKS = [
 
 // Treasure hunt group IDs (to be filled in after creating groups)
 export const TREASURE_HUNT_GROUP_IDS: string[] = [
-  // Test group
+  // Group 1
   "8b2d7fa9abf1190436f59131c6e2ec90",
-  // Remaining 19 groups to be added
-  // "group_id_2",
+  // Group 2
+  "1436b22d4f23fe4a4dfc5673e5bdbe33",
+  // Remaining 18 groups to be added
   // "group_id_3",
+  // "group_id_4",
   // ... up to 20
 ];
 
