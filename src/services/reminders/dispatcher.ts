@@ -43,18 +43,18 @@ export class ReminderDispatcher {
       // Send reminder only to the specific conversation where it was requested
       // This fixes the privacy issue where reminders were sent to all user conversations
       const conversation = await this.client.conversations.getConversationById(
-        reminder.conversation_id
+        reminder.conversationId
       );
 
       if (conversation) {
         const reminderMessage = `⏰ Reminder: ${reminder.message}`;
         await conversation.send(reminderMessage);
         console.log(
-          `Sent reminder #${reminder.id} to conversation ${reminder.conversation_id}`
+          `Sent reminder #${reminder.id} to conversation ${reminder.conversationId}`
         );
       } else {
         console.error(
-          `Could not find conversation ${reminder.conversation_id} for reminder #${reminder.id}`
+          `Could not find conversation ${reminder.conversationId} for reminder #${reminder.id}`
         );
       }
     } catch (error) {
