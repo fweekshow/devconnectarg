@@ -553,7 +553,7 @@ ${currentTask.description}
             id: "treasure_hunt_join_response",
             description: `${treasureHuntResult.message}
         
-        Is there anything else I can help with?`,
+Is there anything else I can help with?`,
             actions: [
               {
                 id: "show_main_menu",

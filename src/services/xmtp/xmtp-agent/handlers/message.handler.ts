@@ -46,13 +46,13 @@ export class MessageCallbackHandler implements ICallbackHandler {
               );
               const scheduleResponse = `You can view the full schedule at devconnect.org/calendar and sign up for sessions. Feel free to ask me any questions about the schedule and I'll help you craft an epic DevConnect experience.
             
-            Examples:
-            •⁠  ⁠When is DevConnect Opening Ceremony?
-            •⁠  ⁠When is Builder Nights Buenos Aires?
-            •⁠  ⁠Tell me about ETH Day
-            •⁠  ⁠What events are on Thursday?
-            
-            Just ask naturally - I understand conversational requests!`;
+Examples:
+•⁠  ⁠When is DevConnect Opening Ceremony?
+•⁠  ⁠When is Builder Nights Buenos Aires?
+•⁠  ⁠Tell me about ETH Day
+•⁠  ⁠What events are on Thursday?
+
+Just ask naturally - I understand conversational requests!`;
 
               await ctx.sendText(scheduleResponse);
 
@@ -177,11 +177,11 @@ export class MessageCallbackHandler implements ICallbackHandler {
                 id: "wifi_followup_actions",
                 description: `📶 DevConnect 2025 WiFi Information
                 
-                WiFi details coming soon!
-                
-                Check back closer to the event for network credentials to access high-speed internet at La Rural.
-                
-                Is there anything else I can help with?`,
+WiFi details coming soon!
+
+Check back closer to the event for network credentials to access high-speed internet at La Rural.
+
+Is there anything else I can help with?`,
                 actions: [
                   {
                     id: "show_main_menu",
@@ -213,17 +213,17 @@ export class MessageCallbackHandler implements ICallbackHandler {
                 "EventLogistics"
               );
               await ctx.sendText(`📋 Event Logistics
-                
-                🗓️ Dates: November 13-19, 2025
-                📍 Location: La Rural Convention Center, Buenos Aires, Argentina
-                
-                For detailed information about:
-                • Venue maps and directions
-                • Transportation and shuttles
-                • Accommodation recommendations  
-                • Local amenities
-                
-                Visit: https://devconnect.org/calendar `);
+
+🗓️ Dates: November 13-19, 2025
+📍 Location: La Rural Convention Center, Buenos Aires, Argentina
+
+For detailed information about:
+• Venue maps and directions
+• Transportation and shuttles
+• Accommodation recommendations  
+• Local amenities
+
+Visit: https://devconnect.org/calendar `);
 
               const logisticsFollowupActionsContent: ActionsContent = {
                 id: "logistics_followup_actions",
@@ -261,12 +261,12 @@ export class MessageCallbackHandler implements ICallbackHandler {
               const conciergeActionsContent: ActionsContent = {
                 id: "concierge_support_actions",
                 description: `Concierge Support
-                
-                I'm here to help as your Concierge during DevConnect 2025! 
-                
-                Concierge contact details coming soon. Check back closer to the event for support information.
-                
-                Is there anything else I can help with?`,
+
+I'm here to help as your Concierge during DevConnect 2025! 
+
+Concierge contact details coming soon. Check back closer to the event for support information.
+
+Is there anything else I can help with?`,
                 actions: [
                   {
                     id: "show_main_menu",

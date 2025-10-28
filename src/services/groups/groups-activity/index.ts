@@ -317,8 +317,7 @@ export class ActivityGroupsService extends XMTPServiceBase {
           const baseGroupFollowupActionsContent: ActionsContent = {
             id: "base_group_join_followup",
             description: `${baseGroupResult}
-        
-        Is there anything else I can help with?`,
+Is there anything else I can help with?`,
             actions: [
               {
                 id: "show_main_menu",
@@ -353,7 +352,7 @@ export class ActivityGroupsService extends XMTPServiceBase {
             id: "eth_group_join_followup",
             description: `${ethGroupResult}
         
-        Is there anything else I can help with?`,
+Is there anything else I can help with?`,
             actions: [
               {
                 id: "show_main_menu",
@@ -392,7 +391,7 @@ export class ActivityGroupsService extends XMTPServiceBase {
             id: "xmtp_group_join_followup",
             description: `${xmtpGroupResult}
         
-        Is there anything else I can help with?`,
+Is there anything else I can help with?`,
             actions: [
               {
                 id: "show_main_menu",
@@ -433,7 +432,7 @@ export class ActivityGroupsService extends XMTPServiceBase {
             id: "ethcon_argentina_join_followup",
             description: `${ethconArgResult}
         
-        Is there anything else I can help with?`,
+Is there anything else I can help with?`,
             actions: [
               {
                 id: "show_main_menu",
@@ -473,7 +472,7 @@ export class ActivityGroupsService extends XMTPServiceBase {
             id: "staking_summit_join_followup",
             description: `${stakingSummitResult}
         
-        Is there anything else I can help with?`,
+Is there anything else I can help with?`,
             actions: [
               {
                 id: "show_main_menu",
@@ -514,7 +513,7 @@ export class ActivityGroupsService extends XMTPServiceBase {
             id: "builder_nights_join_followup",
             description: `${builderNightsResult}
         
-        Is there anything else I can help with?`,
+Is there anything else I can help with?`,
             actions: [
               {
                 id: "show_main_menu",

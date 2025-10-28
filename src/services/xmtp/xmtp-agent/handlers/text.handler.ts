@@ -287,7 +287,7 @@ Message to Classify: ${response}
               id: "response_followup_actions",
               description: `${response}
         
-        Is there anything else I can help with?`,
+Is there anything else I can help with?`,
               actions: [
                 {
                   id: "show_main_menu",
