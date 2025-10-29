@@ -154,8 +154,8 @@ This project is an XMTP-powered AI concierge for DevConnect 2025. It uses a clea
 
 #### Example pattern (based on `src/adapters/user.adapter.ts`)
 ```ts
-import { db } from "@/config";
-import { UserInsertParams } from "@/models";
+import { db } from "@/config/index.js";
+import { UserInsertParams } from "@/models/index.js";
 
 export class UserAdapter {
   static async createTable(): Promise<void> {
@@ -194,8 +194,8 @@ export class UserAdapter {
 
 #### Template: New Adapter
 ```ts
-import { db } from "@/config";
-import { MyEntityInsertParams } from "@/models";
+import { db } from "@/config/index.js";
+import { MyEntityInsertParams } from "@/models/index.js";
 
 export class MyEntityAdapter {
   static async createTable(): Promise<void> {
@@ -272,11 +272,11 @@ import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { ChatOpenAI } from "@langchain/openai";
 import { AgentExecutor, createToolCallingAgent } from "langchain/agents";
 
-import { ENV } from "@/config";
-import { DEFAULT_REPLY } from "@/constants";
+import { ENV } from "@/config/index.js";
+import { DEFAULT_REPLY } from "@/constants/index.js";
 
 import { SYSTEM_PROMPT } from "./prompt.js";
-import { DEFAULT_TOOLS } from "./tools";
+import { DEFAULT_TOOLS } from "./tools/index.js";
 
 export class AIAgent {
   private model: ChatOpenAI;
@@ -344,7 +344,7 @@ export abstract class XMTPServiceBase {
 ```ts
 import { MessageContext } from "@xmtp/agent-sdk";
 import type { Client } from "@xmtp/node-sdk";
-import { XMTPServiceBase } from "@/services/xmtpServiceBase";
+import { XMTPServiceBase } from "@/services/xmtpServiceBase.js";
 
 export class BrodcastService extends XMTPServiceBase {
   constructor(client: Client<any>) {
@@ -377,7 +377,7 @@ export class BrodcastService extends XMTPServiceBase {
 ```ts
 import { MessageContext } from "@xmtp/agent-sdk";
 import type { Client } from "@xmtp/node-sdk";
-import { XMTPServiceBase } from "@/services/xmtpServiceBase";
+import { XMTPServiceBase } from "@/services/xmtpServiceBase.js";
 
 export class MyFeatureService extends XMTPServiceBase {
   constructor(client: Client<any>) {
@@ -439,8 +439,8 @@ export interface MyEntity { id: number; name: string; createdAt: string }
 2) Create adapter
 ```ts
 // src/adapters/myEntity.adapter.ts
-import { db } from "@/config";
-import { MyEntityInsertParams } from "@/models";
+import { db } from "@/config/index.js";
+import { MyEntityInsertParams } from "@/models/index.js";
 
 export class MyEntityAdapter {
   static async createTable(): Promise<void> {
