@@ -15,6 +15,7 @@ import { XMTPClient } from "@/services/xmtp/xmtp-client";
 import { BrodcastService } from "@/services/broadcast";
 import { ActivityGroupsService } from "@/services/groups/groups-activity";
 import { SidebarGroupsService } from "@/services/groups/groups-sidebar";
+import { DynamicGroupsService } from "@/services/groups/groups-dynamic";
 import { TreasureHuntService } from "@/services/treasurehunt";
 import { ReminderDispatcher } from "@/services/reminders";
 
@@ -32,6 +33,7 @@ export class XMTPAgent {
     broadcast?: BrodcastService;
     activityGroups?: ActivityGroupsService;
     sidebarGroups?: SidebarGroupsService;
+    dynamicGroups?: DynamicGroupsService;
     treasureHunt?: TreasureHuntService;
     reminderDispatcher?: ReminderDispatcher;
   } = {};
@@ -72,6 +74,7 @@ export class XMTPAgent {
     this.servicesClient.broadcast = new BrodcastService(client);
     this.servicesClient.activityGroups = new ActivityGroupsService(client);
     this.servicesClient.sidebarGroups = new SidebarGroupsService(client);
+    this.servicesClient.dynamicGroups = new DynamicGroupsService(client);
     this.servicesClient.treasureHunt = new TreasureHuntService(client);
 
     // Initialize groups
@@ -96,12 +99,14 @@ export class XMTPAgent {
         this.servicesClient.broadcast!,
         this.servicesClient.treasureHunt!,
         this.servicesClient.sidebarGroups!,
+         this.servicesClient.dynamicGroups!
       ]),
       new MessageCallbackHandler(this.agent, [
         this.servicesClient.activityGroups!,
         this.servicesClient.treasureHunt!,
         this.servicesClient.broadcast!,
-        this.servicesClient.sidebarGroups! //default case always at the last for sidebar group
+        this.servicesClient.dynamicGroups!,
+        this.servicesClient.sidebarGroups!, //default case always at the last for sidebar group
       ]),
     ]);
   }

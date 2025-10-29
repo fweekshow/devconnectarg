@@ -44,7 +44,9 @@ export class MessageCallbackHandler implements ICallbackHandler {
                 ctx.message.senderInboxId,
                 "Schedule"
               );
-              const scheduleResponse = `You can view the full schedule at devconnect.org/calendar and sign up for sessions. Feel free to ask me any questions about the schedule and I'll help you craft an epic DevConnect experience.
+              
+              // Send schedule info text first (with URL)
+              const scheduleText = `You can view the full schedule at https://devconnect.org/calendar and sign up for sessions. Feel free to ask me any questions about the schedule and I'll help you craft an epic DevConnect experience.
             
 Examples:
 •⁠  ⁠When is DevConnect Opening Ceremony?
@@ -53,9 +55,10 @@ Examples:
 •⁠  ⁠What events are on Thursday?
 
 Just ask naturally - I understand conversational requests!`;
-
-              await ctx.sendText(scheduleResponse);
-
+              
+              await ctx.sendText(scheduleText);
+              
+              // Send followup actions separately
               const scheduleFollowupActionsContent: ActionsContent = {
                 id: "schedule_followup_actions",
                 description: "Is there anything else I can help with?",
@@ -212,10 +215,10 @@ Is there anything else I can help with?`,
                 ctx.message.senderInboxId,
                 "EventLogistics"
               );
-              await ctx.sendText(`📋 Event Logistics
+              await ctx.sendText(`Event Logistics
 
-🗓️ Dates: November 13-19, 2025
-📍 Location: La Rural Convention Center, Buenos Aires, Argentina
+Dates: November 13-19, 2025
+Location: La Rural Convention Center, Buenos Aires, Argentina
 
 For detailed information about:
 • Venue maps and directions

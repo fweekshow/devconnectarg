@@ -237,7 +237,7 @@ export class ActivityGroupsService extends XMTPServiceBase {
 
     return {
       id: `${normalized}_group_join`,
-      description: `🎯 ${displayName} schedule: ${scheduleInfo}
+      description: `${displayName} schedule: ${scheduleInfo}
   
   Would you like me to add you to the ${displayName} @ DevConnect group chat?`,
       actions: [
@@ -258,21 +258,21 @@ export class ActivityGroupsService extends XMTPServiceBase {
   generateGroupSelectionQuickActions() {
     return {
       id: "group_selection_actions",
-      description: "👥 Which DevConnect group would you like to join?",
+      description: "Which DevConnect group would you like to join?",
       actions: [
         {
           id: "join_ethcon_argentina",
-          label: "🇦🇷 ETHCON Argentina 2025",
+          label: "ETHCON Argentina 2025",
           style: "primary" as const,
         },
         {
           id: "join_staking_summit",
-          label: "⛰️ Staking Summit",
+          label: "Staking Summit",
           style: "primary" as const,
         },
         {
           id: "join_builder_nights",
-          label: "🔨 Builder Nights Buenos Aires",
+          label: "Builder Nights Buenos Aires",
           style: "primary" as const,
         },
       ],
