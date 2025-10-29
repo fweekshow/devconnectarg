@@ -1,6 +1,6 @@
 import type { TransactionReference } from "@xmtp/content-type-transaction-reference";
 import type { Conversation } from "@xmtp/node-sdk";
-import type { TokenHandler } from "./tokenHandler";
+import type { TokenHandler } from "./tokenHandler.js";
 
 // Type definitions for the nested TransactionReference structure
 interface TransactionMetadata {

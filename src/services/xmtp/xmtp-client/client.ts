@@ -5,7 +5,7 @@ import { createWalletClient, http, toBytes } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 
-import { ENV } from "@/config";
+import { ENV } from "@/config/index.js";
 
 interface User {
   key: `0x${string}`;

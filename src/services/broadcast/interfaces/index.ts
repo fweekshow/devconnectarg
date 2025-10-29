@@ -1,1 +1,1 @@
-export * from "./pendingBroadcast.interface";
+export * from "./pendingBroadcast.interface.js";

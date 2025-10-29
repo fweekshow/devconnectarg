@@ -1,4 +1,4 @@
-import { DEVCONNECT_URL } from "./urls";
+import { DEVCONNECT_URL } from "./urls.js";
 
 export const DEVCONNECT_INFO = `
 DevConnect 2025 Information:

@@ -3,7 +3,7 @@ import { getName } from "@coinbase/onchainkit/identity";
 import { MessageContext } from "@xmtp/agent-sdk";
 import type { Client } from "@xmtp/node-sdk";
 
-import { STAFF_WALLETS } from "@/constants";
+import { STAFF_WALLETS } from "@/constants/index.js";
 
 export abstract class XMTPServiceBase {
   protected client: Client<any>;

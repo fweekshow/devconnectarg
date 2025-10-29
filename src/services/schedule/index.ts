@@ -5,7 +5,7 @@ import {
   GetActivityTimeParams,
   GetNightActivitiesParams,
   GetSpeakerInfoParams,
-} from "./interfaces";
+} from "./interfaces/index.js";
 
 import {
   GetFullScheduleSchema,
@@ -14,14 +14,14 @@ import {
   GetActivityTimeSchema,
   GetNightActivitiesSchema,
   GetSpeakerInfoSchema,
-} from "./schemas";
+} from "./schemas/index.js";
 
 import {
   eventDate,
   INVALID_DAY_MESSAGE,
   SCHEDULE_DATA,
   SPEAKERS_DATA,
-} from "@/constants";
+} from "@/constants/index.js";
 
 export class ScheduleService {
     

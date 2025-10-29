@@ -1,2 +1,2 @@
-export * from "./pendingInvitation.interface";
-export * from "./sidebarGroup.interface";
+export * from "./pendingInvitation.interface.js";
+export * from "./sidebarGroup.interface.js";

@@ -1,2 +1,2 @@
-export * from "./ActionsContent";
-export * from "./IntentContent";
+export * from "./ActionsContent.js";
+export * from "./IntentContent.js";

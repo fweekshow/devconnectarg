@@ -1,5 +1,5 @@
-import { EXPIRY_MS, MAX_HISTORY } from "@/constants";
-import { ConversationEntry } from "./interfaces";
+import { EXPIRY_MS, MAX_HISTORY } from "@/constants/index.js";
+import { ConversationEntry } from "./interfaces/index.js";
 
 export class ConversationMemoryService {
   private static conversationHistory = new Map<string, ConversationEntry[]>();

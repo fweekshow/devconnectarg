@@ -4,10 +4,10 @@ import type { Client } from "@xmtp/node-sdk";
 import {
   ContentTypeActions,
   type ActionsContent,
-} from "@/services/xmtp/xmtp-inline-actions/types";
-import { XMTPServiceBase } from "@/services/xmtpServiceBase";
+} from "@/services/xmtp/xmtp-inline-actions/types/index.js";
+import { XMTPServiceBase } from "@/services/xmtpServiceBase.js";
 
-import { PendingBroadcast } from "./interfaces";
+import { PendingBroadcast } from "./interfaces/index.js";
 
 export class BrodcastService extends XMTPServiceBase {
   private pendingBroadcasts = new Map<string, PendingBroadcast>();

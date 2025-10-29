@@ -1,6 +1,6 @@
 import { Agent } from "@xmtp/agent-sdk";
-import { ICallbackHandler } from "../interfaces";
-import { GroupAdapter } from "@/adapters";
+import { ICallbackHandler } from "../interfaces/index.js";
+import { GroupAdapter } from "@/adapters/index.js";
 
 export class GroupCallbackHandler implements ICallbackHandler {
   constructor(private agent: Agent) {}

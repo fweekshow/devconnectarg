@@ -1,7 +1,7 @@
 import { Client } from "@xmtp/node-sdk";
 
-import { CryptoUtils, XMTPClient } from "@/services/xmtp/xmtp-client";
-import { ENV } from "@/config";
+import { CryptoUtils, XMTPClient } from "@/services/xmtp/xmtp-client/index.js";
+import { ENV } from "@/config/index.js";
 
 const {WALLET_KEY, DB_ENCRYPTION_KEY, XMTP_ENV} = ENV;
 

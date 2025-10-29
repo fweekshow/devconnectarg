@@ -1,5 +1,5 @@
-import { db } from "@/config";
-import { GroupInsertParams } from "@/models";
+import { db } from "@/config/index.js";
+import { GroupInsertParams } from "@/models/index.js";
 
 export class GroupAdapter {
   static async createTable(): Promise<void> {

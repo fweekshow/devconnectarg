@@ -1,5 +1,5 @@
 import { tool } from "@langchain/core/tools";
-import { DEVCONNECT_INFO } from "@/constants";
+import { DEVCONNECT_INFO } from "@/constants/index.js";
 
 export const fetchDevConnectInfo = tool(
   () => {

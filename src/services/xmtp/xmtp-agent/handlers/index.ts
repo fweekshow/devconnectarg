@@ -1,3 +1,3 @@
-export * from "./group.handler";
-export * from "./message.handler";
-export * from "./text.handler";
+export * from "./group.handler.js";
+export * from "./message.handler.js";
+export * from "./text.handler.js";

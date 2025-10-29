@@ -1,18 +1,18 @@
 import { Agent } from "@xmtp/agent-sdk";
 
-import { GroupAdapter, UserAdapter } from "@/adapters";
-import { AIAgent } from "@/agent";
-import { ENV } from "@/config";
-import { isMentioned, removeMention } from "@/utils/mentions";
-import { ConversationMemoryService } from "@/services/conversation-memory";
+import { GroupAdapter, UserAdapter } from "@/adapters/index.js";
+import { AIAgent } from "@/agent/index.js";
+import { ENV } from "@/config/index.js";
+import { isMentioned, removeMention } from "@/utils/mentions.js";
+import { ConversationMemoryService } from "@/services/conversation-memory/index.js";
 import {
   ActionsContent,
   ContentTypeActions,
-} from "@/services/xmtp/xmtp-inline-actions/types";
+} from "@/services/xmtp/xmtp-inline-actions/types/index.js";
 
-import { ICallbackHandler } from "../interfaces";
-import { CallbackServices } from "../callbackServices.type";
-import { DynamicGroupsService } from "@/services/groups/groups-dynamic";
+import { ICallbackHandler } from "../interfaces/index.js";
+import { CallbackServices } from "../callbackServices.type.js";
+import { DynamicGroupsService } from "@/services/groups/groups-dynamic/index.js";
 
 export class TextCallbackHandler implements ICallbackHandler {
   private aiAgent: AIAgent | null = null;

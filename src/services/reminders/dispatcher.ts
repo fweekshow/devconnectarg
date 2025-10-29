@@ -1,6 +1,6 @@
 import type { Client } from "@xmtp/node-sdk";
 
-import { ReminderAdapter } from "@/adapters";
+import { ReminderAdapter } from "@/adapters/index.js";
 
 export class ReminderDispatcher {
   private intervalId: NodeJS.Timeout | null = null;

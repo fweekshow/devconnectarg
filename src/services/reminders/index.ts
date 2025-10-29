@@ -1,2 +1,2 @@
-export * from "./dispatcher";
-export * from "./reminder";
+export * from "./dispatcher.js";
+export * from "./reminder.js";

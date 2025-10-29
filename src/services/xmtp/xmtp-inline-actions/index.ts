@@ -4,31 +4,35 @@ import { Client, type XmtpEnv } from "@xmtp/node-sdk";
 import {
   handleIntentMessage,
   handleTextMessage,
-} from "./handlers/messageHandlers";
-import { TokenHandler } from "./handlers/tokenHandler";
+} from "./handlers/messageHandlers.js";
+import { TokenHandler } from "./handlers/tokenHandler.js";
 import {
   handleTransactionReference,
   type ExtendedTransactionReference,
-} from "./handlers/transactionHandlers";
-import { ActionsCodec } from "./types/ActionsContent";
-import { IntentCodec, type IntentContent } from "./types/IntentContent";
+} from "./handlers/transactionHandlers.js";
+import {
+  ActionsCodec,
+  IntentCodec,
+  type IntentContent,
+} from "./types/index.js";
 
-import { CryptoUtils, XMTPClient } from "@/services/xmtp/xmtp-client";
-import { ENV } from "@/config";
+import { CryptoUtils, XMTPClient } from "@/services/xmtp/xmtp-client/index.js";
+import { ENV } from "@/config/index.js";
 
-const {WALLET_KEY, NETWORK_ID, DB_ENCRYPTION_KEY, XMTP_ENV} = ENV
+const { WALLET_KEY, NETWORK_ID, DB_ENCRYPTION_KEY, XMTP_ENV } = ENV;
 
 async function main() {
   // Initialize token handler
   const tokenHandler = new TokenHandler(NETWORK_ID);
   console.log(`📡 Connected to network: ${tokenHandler.getNetworkInfo().name}`);
   console.log(
-    `💰 Supported tokens: ${tokenHandler.getSupportedTokens().join(", ")}`,
+    `💰 Supported tokens: ${tokenHandler.getSupportedTokens().join(", ")}`
   );
 
   // Create XMTP client
   const signer = XMTPClient.createSigner(WALLET_KEY);
-  const dbEncryptionKey = CryptoUtils.getEncryptionKeyFromHex(DB_ENCRYPTION_KEY);
+  const dbEncryptionKey =
+    CryptoUtils.getEncryptionKeyFromHex(DB_ENCRYPTION_KEY);
 
   const client = await Client.create(signer, {
     dbEncryptionKey,
@@ -70,12 +74,12 @@ async function main() {
     }
 
     console.log(
-      `Received message: ${message.content as string} by ${message.senderInboxId}`,
+      `Received message: ${message.content as string} by ${message.senderInboxId}`
     );
 
     /* Get the conversation from the local db */
     const conversation = await client.conversations.getConversationById(
-      message.conversationId,
+      message.conversationId
     );
 
     /* If the conversation is not found, skip the message */
@@ -102,33 +106,33 @@ async function main() {
         message.content as string,
         senderAddress,
         agentAddress,
-        tokenHandler,
+        tokenHandler
       );
     } else if (message.contentType.typeId === "transactionReference") {
       console.log("🧾 Detected transaction reference message");
       console.log(
         "📋 Raw message content:",
-        JSON.stringify(message.content, null, 2),
+        JSON.stringify(message.content, null, 2)
       );
       await handleTransactionReference(
         conversation,
         message.content as ExtendedTransactionReference,
         senderAddress,
-        tokenHandler,
+        tokenHandler
       );
     } else {
       // This must be an intent message since we filtered for text, transactionReference, and intent
       console.log("🎯 Detected intent message");
       console.log(
         "📋 Raw intent content:",
-        JSON.stringify(message.content, null, 2),
+        JSON.stringify(message.content, null, 2)
       );
       await handleIntentMessage(
         conversation,
         message.content as IntentContent,
         senderAddress,
         agentAddress,
-        tokenHandler,
+        tokenHandler
       );
     }
   }

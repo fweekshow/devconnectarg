@@ -6,25 +6,25 @@ import {
   AttachmentCodec,
 } from "@xmtp/content-type-remote-attachment";
 
-import { ENV } from "@/config";
+import { ENV } from "@/config/index.js";
 import {
   ActionsCodec,
   IntentCodec,
-} from "@/services/xmtp/xmtp-inline-actions/types";
-import { XMTPClient } from "@/services/xmtp/xmtp-client";
-import { BrodcastService } from "@/services/broadcast";
-import { ActivityGroupsService } from "@/services/groups/groups-activity";
-import { SidebarGroupsService } from "@/services/groups/groups-sidebar";
-import { DynamicGroupsService } from "@/services/groups/groups-dynamic";
-import { TreasureHuntService } from "@/services/treasurehunt";
-import { ReminderDispatcher } from "@/services/reminders";
+} from "@/services/xmtp/xmtp-inline-actions/types/index.js";
+import { XMTPClient } from "@/services/xmtp/xmtp-client/index.js";
+import { BrodcastService } from "@/services/broadcast/index.js";
+import { ActivityGroupsService } from "@/services/groups/groups-activity/index.js";
+import { SidebarGroupsService } from "@/services/groups/groups-sidebar/index.js";
+import { DynamicGroupsService } from "@/services/groups/groups-dynamic/index.js";
+import { TreasureHuntService } from "@/services/treasurehunt/index.js";
+import { ReminderDispatcher } from "@/services/reminders/index.js";
 
-import { CallbackRegistry } from "./callbackRegistry";
+import { CallbackRegistry } from "./callbackRegistry.js";
 import {
   GroupCallbackHandler,
   MessageCallbackHandler,
   TextCallbackHandler,
-} from "./handlers";
+} from "./handlers/index.js";
 
 export class XMTPAgent {
   private agent: Agent | null = null;

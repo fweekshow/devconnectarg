@@ -1,12 +1,12 @@
 import { ContentTypeWalletSendCalls } from "@xmtp/content-type-wallet-send-calls";
 import type { Conversation } from "@xmtp/node-sdk";
-import { type IntentContent } from "../types/IntentContent";
+import { type IntentContent } from "../types/index.js";
 import {
   handleActionsCommand,
   handleActionsWithImagesCommand,
   handleHelpCommand,
-} from "./actionHandlers";
-import type { TokenHandler } from "./tokenHandler";
+} from "./actionHandlers.js";
+import type { TokenHandler } from "./tokenHandler.js";
 
 export async function handleTextMessage(
   conversation: Conversation,

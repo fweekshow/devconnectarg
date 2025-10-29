@@ -1,5 +1,5 @@
-import { ScheduleAdapter } from "@/adapters";
-import { ScheduleType, ScheduleStatus, ScheduleInsertParams } from "@/models";
+import { ScheduleAdapter } from "@/adapters/index.js";
+import { ScheduleType, ScheduleStatus, ScheduleInsertParams } from "@/models/index.js";
 
 // Sample DevConnect 2025 schedule data
 const devConnectSchedule: ScheduleInsertParams[] = [

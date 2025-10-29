@@ -2,11 +2,11 @@ import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { ChatOpenAI } from "@langchain/openai";
 import { AgentExecutor, createToolCallingAgent } from "langchain/agents";
 
-import { ENV } from "@/config";
-import { DEFAULT_REPLY } from "@/constants";
+import { ENV } from "@/config/index.js";
+import { DEFAULT_REPLY } from "@/constants/index.js";
 
 import { SYSTEM_PROMPT } from "./prompt.js";
-import { DEFAULT_TOOLS } from "./tools";
+import { DEFAULT_TOOLS } from "./tools/index.js";
 
 export class AIAgent {
   private model: ChatOpenAI;

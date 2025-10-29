@@ -11,14 +11,14 @@ import {
   TREASURE_HUNT_CONFIG,
   TREASURE_HUNT_GROUP_IDS,
   TREASURE_HUNT_TASKS,
-} from "@/constants";
-import { XMTPServiceBase } from "@/services/xmtpServiceBase";
+} from "@/constants/index.js";
+import { XMTPServiceBase } from "@/services/xmtpServiceBase.js";
 import {
   ActionsContent,
   ContentTypeActions,
-} from "@/services/xmtp/xmtp-inline-actions/types";
+} from "@/services/xmtp/xmtp-inline-actions/types/index.js";
 
-import { PendingImages } from "./interfaces";
+import { PendingImages } from "./interfaces/index.js";
 
 export class TreasureHuntService extends XMTPServiceBase {
   private pendingTreasureImages = new Map<string, PendingImages>();

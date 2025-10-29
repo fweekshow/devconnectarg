@@ -2,8 +2,8 @@ import { MessageContext } from "@xmtp/agent-sdk";
 import OpenAI from "openai";
 import type { Client } from "@xmtp/node-sdk";
 
-import { DYNAMIC_GROUPS, type DynamicGroupKey } from "@/constants/groups";
-import { XMTPServiceBase } from "@/services/xmtpServiceBase";
+import { DYNAMIC_GROUPS, type DynamicGroupKey } from "@/constants/index.js";
+import { XMTPServiceBase } from "@/services/xmtpServiceBase.js";
 
 export class DynamicGroupsService extends XMTPServiceBase {
   constructor(client: Client<any>) {

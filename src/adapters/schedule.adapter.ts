@@ -1,5 +1,5 @@
-import { db } from "@/config";
-import { ScheduleInsertParams } from "@/models";
+import { db } from "@/config/index.js";
+import { ScheduleInsertParams } from "@/models/index.js";
 
 export class ScheduleAdapter {
   static async createTable(): Promise<void> {

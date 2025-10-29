@@ -1,4 +1,4 @@
-import { ENV } from "@/config";
+import { ENV } from "@/config/index.js";
 
 // Create regex for detecting mentions
 const createMentionRegex = (): RegExp => {

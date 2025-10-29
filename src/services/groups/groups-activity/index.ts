@@ -1,18 +1,18 @@
 import { MessageContext } from "@xmtp/agent-sdk";
 import type { Client } from "@xmtp/node-sdk";
 
-import { ENV } from "@/config";
+import { ENV } from "@/config/index.js";
 import {
   ACTIVITY_GROUP_MAP,
   ACTIVITY_GROUPS,
   ACTIVITY_NAMES,
-} from "@/constants";
-import { XMTPServiceBase } from "@/services/xmtpServiceBase";
-import { UserAdapter } from "@/adapters/user.adapter.js";
+} from "@/constants/index.js";
+import { XMTPServiceBase } from "@/services/xmtpServiceBase.js";
+import { UserAdapter } from "@/adapters/index.js";
 import {
   ActionsContent,
   ContentTypeActions,
-} from "@/services/xmtp/xmtp-inline-actions/types/ActionsContent.js";
+} from "@/services/xmtp/xmtp-inline-actions/types/index.js";
 
 export class ActivityGroupsService extends XMTPServiceBase {
   constructor(client: Client<any>) {

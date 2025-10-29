@@ -1,1 +1,1 @@
-export * from "./handler.interface"
+export * from "./handler.interface.js"

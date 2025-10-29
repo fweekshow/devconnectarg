@@ -1,4 +1,4 @@
-import { ICallbackHandler } from "./interfaces";
+import { ICallbackHandler } from "./interfaces/index.js";
 
 export class CallbackRegistry {
   static registerHandlers(handlers: ICallbackHandler[]): void {

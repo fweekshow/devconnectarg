@@ -1,2 +1,2 @@
-export * from "./schedule.interface";
-export * from "./speaker.interface";
+export * from "./schedule.interface.js";
+export * from "./speaker.interface.js";

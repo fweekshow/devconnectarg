@@ -1,7 +1,7 @@
 import type { Client } from "@xmtp/node-sdk";
 
-import { STAFF_WALLETS } from "@/constants";
-import { XMTPServiceBase } from "@/services/xmtpServiceBase";
+import { STAFF_WALLETS } from "@/constants/index.js";
+import { XMTPServiceBase } from "@/services/xmtpServiceBase.js";
 
 export class UrgentMessageService extends XMTPServiceBase {
   constructor(client: Client<any>) {

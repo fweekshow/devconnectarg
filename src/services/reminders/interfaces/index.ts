@@ -1,2 +1,2 @@
-export * from "./datetime.interface";
-export * from "./reminder.interface";
+export * from "./datetime.interface.js";
+export * from "./reminder.interface.js";

@@ -3,12 +3,12 @@ import {
   ReminderAdapter,
   ScheduleAdapter,
   UserAdapter,
-} from "@/adapters";
-import { connectDb, ENV } from "@/config";
-import { CLEANUP_DURATION } from "@/constants";
-import { ConversationMemoryService } from "@/services/conversation-memory";
-import { XMTPAgent } from "@/services/xmtp/xmtp-agent";
-import { ContentTypeActions } from "@/services/xmtp/xmtp-inline-actions/types";
+} from "@/adapters/index.js";
+import { connectDb, ENV } from "@/config/index.js";
+import { CLEANUP_DURATION } from "@/constants/index.js";
+import { ConversationMemoryService } from "@/services/conversation-memory/index.js";
+import { XMTPAgent } from "@/services/xmtp/xmtp-agent/index.js";
+import { ContentTypeActions } from "@/services/xmtp/xmtp-inline-actions/types/index.js";
 
 console.log(`🚀 Starting DevConnect 2025 Concierge Agent (Agent SDK)`);
 // Initialize database

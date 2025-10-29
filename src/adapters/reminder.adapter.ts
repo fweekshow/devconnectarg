@@ -1,5 +1,5 @@
-import { db } from "@/config";
-import { Reminder, ReminderInsertParams } from "@/models";
+import { db } from "@/config/index.js";
+import { Reminder, ReminderInsertParams } from "@/models/index.js";
 import { DateTime } from "luxon";
 
 const serializeReminder = (row: any): Reminder => {

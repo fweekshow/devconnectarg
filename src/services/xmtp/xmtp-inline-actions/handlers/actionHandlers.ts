@@ -2,8 +2,8 @@ import type { Conversation } from "@xmtp/node-sdk";
 import {
   ContentTypeActions,
   type ActionsContent,
-} from "../types/ActionsContent";
-import type { TokenHandler } from "./tokenHandler";
+} from "../types/index.js";
+import type { TokenHandler } from "./tokenHandler.js";
 
 export async function handleActionsCommand(
   conversation: Conversation,

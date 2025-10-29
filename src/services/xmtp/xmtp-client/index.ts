@@ -1,2 +1,2 @@
-export * from "./client";
-export * from "./cryptoUtils";
+export * from "./client.js";
+export * from "./cryptoUtils.js";

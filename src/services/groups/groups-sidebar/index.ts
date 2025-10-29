@@ -1,15 +1,15 @@
 import { MessageContext } from "@xmtp/agent-sdk";
 import type { DecodedMessage, Conversation, Client } from "@xmtp/node-sdk";
+
+import { GroupAdapter } from "@/adapters/index.js";
+import { ENV } from "@/config/index.js";
+import { BANKR_INBOX_ID, DEFAULT_GROUP_MEMBER_COUNT } from "@/constants/index.js";
+import { XMTPServiceBase } from "@/services/xmtpServiceBase.js";
 import {
   ActionsContent,
   ContentTypeActions,
-} from "@/services/xmtp/xmtp-inline-actions/types";
-
-import { GroupAdapter } from "@/adapters";
-import { ENV } from "@/config";
-import { BANKR_INBOX_ID, DEFAULT_GROUP_MEMBER_COUNT } from "@/constants";
-import { XMTPServiceBase } from "@/services/xmtpServiceBase";
-import { PendingInvitation, SidebarGroup } from "./interfaces";
+} from "@/services/xmtp/xmtp-inline-actions/types/index.js";
+import { PendingInvitation, SidebarGroup } from "./interfaces/index.js";
 
 export class SidebarGroupsService extends XMTPServiceBase {
   private sidebarGroups = new Map<string, SidebarGroup>();

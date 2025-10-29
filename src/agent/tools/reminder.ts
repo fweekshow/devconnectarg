@@ -1,13 +1,13 @@
 import { tool } from "@langchain/core/tools";
 
-import { ReminderService } from "@/services/reminders";
+import { ReminderService } from "@/services/reminders/index.js";
 import {
   CancelAllRemindersSchema,
   CancelReminderSchema,
   FetchAllPendingRemindersSchema,
   FetchCurrentDateTimeSchema,
   SetReminderSchema,
-} from "@/services/reminders/schemas";
+} from "@/services/reminders/schemas/index.js";
 
 export const fetchAllPendingReminders = tool(
   ReminderService.fetchAllPendingReminders,

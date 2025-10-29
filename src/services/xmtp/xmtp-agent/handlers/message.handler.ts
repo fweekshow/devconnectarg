@@ -1,14 +1,14 @@
 import { Agent } from "@xmtp/agent-sdk";
 
-import { UserAdapter } from "@/adapters";
+import { UserAdapter } from "@/adapters/index.js";
 import {
   ActionsContent,
   ContentTypeActions,
   ContentTypeIntent,
-} from "@/services/xmtp/xmtp-inline-actions/types";
+} from "@/services/xmtp/xmtp-inline-actions/types/index.js";
 
-import { ICallbackHandler } from "../interfaces";
-import { CallbackServices } from "../callbackServices.type";
+import { ICallbackHandler } from "../interfaces/index.js";
+import { CallbackServices } from "../callbackServices.type.js";
 
 export class MessageCallbackHandler implements ICallbackHandler {
   constructor(

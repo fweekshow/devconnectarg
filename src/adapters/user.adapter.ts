@@ -1,5 +1,5 @@
-import { db } from "@/config";
-import { UserInsertParams } from "@/models";
+import { db } from "@/config/index.js";
+import { UserInsertParams } from "@/models/index.js";
 
 export class UserAdapter {
   static async createTable(): Promise<void> {

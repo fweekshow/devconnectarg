@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
 
-import { TreasureHuntAdapter } from "@/adapters";
-import { connectDb, ENV } from "@/config";
-import { TREASURE_HUNT_TASKS } from "@/constants";
+import { TreasureHuntAdapter } from "@/adapters/index.js";
+import { connectDb, ENV } from "@/config/index.js";
+import { TREASURE_HUNT_TASKS } from "@/constants/index.js";
 
 async function initializeTreasureHunt() {
   try {

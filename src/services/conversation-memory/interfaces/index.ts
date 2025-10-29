@@ -1,1 +1,1 @@
-export * from "./conversation.interface";
+export * from "./conversation.interface.js";

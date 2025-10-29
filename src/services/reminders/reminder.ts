@@ -1,7 +1,7 @@
 import { DateTime } from "luxon";
 
-import { ReminderAdapter, UserAdapter } from "@/adapters";
-import { EVENT_TZ } from "@/constants";
+import { ReminderAdapter, UserAdapter } from "@/adapters/index.js";
+import { EVENT_TZ } from "@/constants/index.js";
 
 import {
   FetchAllPendingRemindersParams,
@@ -9,14 +9,14 @@ import {
   CancelAllRemindersParams,
   SetReminderParams,
   FetchCurrentDateTimeParams,
-} from "./interfaces";
+} from "./interfaces/index.js";
 import {
   FetchAllPendingRemindersSchema,
   CancelReminderSchema,
   CancelAllRemindersSchema,
   SetReminderSchema,
   FetchCurrentDateTimeSchema,
-} from "./schemas";
+} from "./schemas/index.js";
 
 export class ReminderService {
   static async fetchAllPendingReminders(

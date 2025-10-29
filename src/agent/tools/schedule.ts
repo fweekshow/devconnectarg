@@ -1,4 +1,4 @@
-import { ScheduleService } from "@/services/schedule";
+import { ScheduleService } from "@/services/schedule/index.js";
 import {
   GetFullScheduleSchema,
   GetSpecificDayScheduleSchema,
@@ -6,7 +6,7 @@ import {
   GetActivityTimeSchema,
   GetNightActivitiesSchema,
   GetSpeakerInfoSchema,
-} from "@/services/schedule/schemas";
+} from "@/services/schedule/schemas/index.js";
 import { tool } from "@langchain/core/tools";
 
 

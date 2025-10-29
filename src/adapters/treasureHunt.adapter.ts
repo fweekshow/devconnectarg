@@ -1,5 +1,5 @@
-import { db } from "@/config";
-import { TreasureHuntTask, TreasureHuntTaskParams } from "@/models";
+import { db } from "@/config/index.js";
+import { TreasureHuntTask, TreasureHuntTaskParams } from "@/models/index.js";
 
 export class TreasureHuntAdapter {
   static async createTable(): Promise<void> {

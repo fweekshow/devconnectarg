@@ -1,2 +1,2 @@
-export * from "./datetime.schema";
-export * from "./reminder.schema";
+export * from "./datetime.schema.js";
+export * from "./reminder.schema.js";
