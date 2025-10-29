@@ -99,13 +99,14 @@ export class XMTPAgent {
         this.servicesClient.broadcast!,
         this.servicesClient.treasureHunt!,
         this.servicesClient.sidebarGroups!,
-      ], this.servicesClient.dynamicGroups!),
+         this.servicesClient.dynamicGroups!
+      ]),
       new MessageCallbackHandler(this.agent, [
         this.servicesClient.activityGroups!,
         this.servicesClient.treasureHunt!,
         this.servicesClient.broadcast!,
-        this.servicesClient.sidebarGroups!, //default case always at the last for sidebar group
         this.servicesClient.dynamicGroups!,
+        this.servicesClient.sidebarGroups!, //default case always at the last for sidebar group
       ]),
     ]);
   }
