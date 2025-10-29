@@ -49,8 +49,8 @@ async function main() {
 
     await xmtpAgent.initializeServices();
 
-    process.on("SIGINT", xmtpAgent.cleanup);
-    process.on("SIGTERM", xmtpAgent.cleanup);
+    process.on("SIGINT", xmtpAgent.cleanup.bind(xmtpAgent));
+    process.on("SIGTERM", xmtpAgent.cleanup.bind(xmtpAgent));
 
     console.log("👂 Setting up message handlers...");
     console.log("💬 Agent will respond to:");
