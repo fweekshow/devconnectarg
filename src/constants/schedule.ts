@@ -145,7 +145,7 @@ export const SCHEDULE_DATA = {
       "8:00 AM - 10:00 AM: University Track - Di Tella Club Blockchain - Included in Ticket. 180 capacity. Mixed Format. Beginner.",
       "10:00 AM - 6:00 PM: Ethproofs Day - Organized by Ethereum Foundation. Included in Ticket. 252 capacity. Mixed Format. All Welcome.",
       "11:00 AM - 1:00 PM: University Track - Trama (ITBA) - Included in Ticket. 180 capacity. Mixed Format. Beginner.",
-      "2:15 PM - 6:00 PM: ETH/ACC DEMO DAY - Organized by Odisea Labs. Included in Ticket. 500 capacity. Mixed Format. All Welcome.",
+      "1:00 PM: ETH/ACC DEMO DAY - a0x will be presenting at ETH/ACC DEMO DAY. Organized by Odisea Labs. Included in Ticket. 500 capacity. Mixed Format. All Welcome. https://luma.com/2dmmtz78 ",
       "All Day: Bridge Atlas - Organized by Summer of Protocols. Signup Required. 100 capacity. Workshop. All Welcome.",
     ],
   },

@@ -302,57 +302,118 @@ Response to classify: ${response}
               );
             }
           } else {
-            // Check if there's a relevant dynamic group for this conversation
-            console.log(`🔍 Checking for relevant dynamic group...`);
-            const relevantGroup = await this.dynamicGroupsService.detectRelevantGroup(
-              cleanContent,
-              response
-            );
-
-            let followupActionsContent: ActionsContent;
+            // Check if response contains URLs - if so, we need to send text and actions separately
+            const containsUrl = response.includes('http://') || response.includes('https://');
             
-            if (relevantGroup) {
-              // Show group join action instead of generic followup
-              console.log(`🎯 Relevant group detected: ${relevantGroup}`);
-              followupActionsContent = {
-                ...this.dynamicGroupsService.generateGroupJoinActions(relevantGroup),
-                description: `${response}
+            if (containsUrl) {
+              console.log(`🔗 Response contains URL - sending text and actions separately`);
+              
+              // Send the response text first (with the URL)
+              await ctx.sendText(response);
+              
+              // Check for relevant dynamic group
+              console.log(`🔍 Checking for relevant dynamic group...`);
+              const relevantGroup = await this.dynamicGroupsService.detectRelevantGroup(
+                cleanContent,
+                response
+              );
+              
+              // Send follow-up actions separately
+              const followupConversation =
+                await ctx.client.conversations.getConversationById(
+                  conversationId
+                );
+              
+              if (followupConversation) {
+                let followupActionsContent: ActionsContent;
+                
+                if (relevantGroup) {
+                  // Show group join action
+                  console.log(`🎯 Relevant group detected: ${relevantGroup}`);
+                  followupActionsContent = this.dynamicGroupsService.generateGroupJoinActions(relevantGroup);
+                } else {
+                  // Show generic followup
+                  console.log(`📝 No relevant group - showing generic followup`);
+                  followupActionsContent = {
+                    id: "response_followup_actions",
+                    description: "Is there anything else I can help with?",
+                    actions: [
+                      {
+                        id: "show_main_menu",
+                        label: "✅ Yes",
+                        style: "primary",
+                      },
+                      {
+                        id: "end_conversation",
+                        label: "❌ No",
+                        style: "secondary",
+                      },
+                    ],
+                  };
+                }
+                
+                await (followupConversation as any).send(
+                  followupActionsContent,
+                  ContentTypeActions
+                );
+                console.log(`✅ Sent response text and ${relevantGroup ? 'group join' : 'generic'} follow-up actions separately`);
+              }
+            } else {
+              // No URL - can send response and actions together
+              console.log(`📝 No URL in response - sending combined message`);
+              
+              // Check if there's a relevant dynamic group for this conversation
+              console.log(`🔍 Checking for relevant dynamic group...`);
+              const relevantGroup = await this.dynamicGroupsService.detectRelevantGroup(
+                cleanContent,
+                response
+              );
+
+              let followupActionsContent: ActionsContent;
+              
+              if (relevantGroup) {
+                // Show group join action instead of generic followup
+                console.log(`🎯 Relevant group detected: ${relevantGroup}`);
+                followupActionsContent = {
+                  ...this.dynamicGroupsService.generateGroupJoinActions(relevantGroup),
+                  description: `${response}
 
 ${this.dynamicGroupsService.generateGroupJoinActions(relevantGroup).description}`
-              };
-            } else {
-              // No relevant group - show generic followup
-              console.log(`📝 No relevant group - showing generic followup`);
-              followupActionsContent = {
-                id: "response_followup_actions",
-                description: `${response}
+                };
+              } else {
+                // No relevant group - show generic followup
+                console.log(`📝 No relevant group - showing generic followup`);
+                followupActionsContent = {
+                  id: "response_followup_actions",
+                  description: `${response}
         
 Is there anything else I can help with?`,
-                actions: [
-                  {
-                    id: "show_main_menu",
-                    label: "✅ Yes",
-                    style: "primary",
-                  },
-                  {
-                    id: "end_conversation",
-                    label: "❌ No",
-                    style: "secondary",
-                  },
-                ],
-              };
-            }
+                  actions: [
+                    {
+                      id: "show_main_menu",
+                      label: "✅ Yes",
+                      style: "primary",
+                    },
+                    {
+                      id: "end_conversation",
+                      label: "❌ No",
+                      style: "secondary",
+                    },
+                  ],
+                };
+              }
 
-            const followupConversation =
-              await ctx.client.conversations.getConversationById(
-                conversationId
-              );
-            if (followupConversation) {
-              await (followupConversation as any).send(
-                followupActionsContent,
-                ContentTypeActions
-              );
-              console.log(`✅ Sent response with ${relevantGroup ? 'group join' : 'generic'} follow-up actions`);
+              const followupConversation =
+                await ctx.client.conversations.getConversationById(
+                  conversationId
+                );
+              if (followupConversation) {
+                await (followupConversation as any).send(
+                  followupActionsContent,
+                  ContentTypeActions
+                );
+                console.log(`✅ Sent response with ${relevantGroup ? 'group join' : 'generic'} follow-up actions`);
+              }
             }
 
             ConversationMemoryService.add(
