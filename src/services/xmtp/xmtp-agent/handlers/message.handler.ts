@@ -9,6 +9,7 @@ import {
 
 import { ICallbackHandler } from "../interfaces/index.js";
 import { CallbackServices } from "../callbackServices.type.js";
+import { generateMenuForContext } from "../utils/menuGenerator.js";
 
 export class MessageCallbackHandler implements ICallbackHandler {
   constructor(
@@ -31,9 +32,15 @@ export class MessageCallbackHandler implements ICallbackHandler {
           actionId = intentContent.actionId;
           const originalActionsId = intentContent.id;
 
-          console.log(`🎯 Received Quick Action intent: ${actionId}`);
-          console.log(`🎯 Intent from actions ID: ${originalActionsId}`);
-          console.log(`🎯 Message content type: ${contentTypeId}`);
+          console.log(`\n${"=".repeat(80)}`);
+          console.log(`🎯 QUICK ACTION RECEIVED`);
+          console.log(`   Conversation ID: ${ctx.conversation.id}`);
+          console.log(`   Type: ${ctx.isGroup() ? "GROUP" : "DM"}`);
+          console.log(`   Group Name: ${ctx.conversation.name || "N/A"}`);
+          console.log(`   Action ID: ${actionId}`);
+          console.log(`   Original Actions ID: ${originalActionsId}`);
+          console.log(`   Content Type: ${contentTypeId}`);
+          console.log(`${"=".repeat(80)}\n`);
         }
 
         if (actionId) {
@@ -88,68 +95,9 @@ Just ask naturally - I understand conversational requests!`;
               return;
 
             case "show_main_menu":
-              const mainMenuActionsContent: ActionsContent = {
-                id: "devconnect_welcome_actions",
-                description:
-                  "Hi! I'm Rocky, your event buddy at DevConnect. Here's what I can help you with:",
-                actions: [
-                  {
-                    id: "schedule",
-                    label: "Schedule",
-                    imageUrl:
-                      "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760465562/ChatGPT_Image_Oct_14_2025_at_03_12_20_PM_p7jhdx.png",
-                    style: "primary",
-                  },
-                  {
-                    id: "wifi",
-                    label: "Wifi",
-                    imageUrl:
-                      "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760465369/vecteezy_simple-wifi-icon_8014226-1_jicvnk.jpg",
-                    style: "secondary",
-                  },
-                  {
-                    id: "event_logistics",
-                    label: "Event Logistics",
-                    imageUrl:
-                      "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464845/checklist_gd3rpo.png",
-                    style: "secondary",
-                  },
-                  {
-                    id: "join_base_group",
-                    label: "Base Group",
-                    imageUrl:
-                      "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760466568/base_s5smwn.png",
-                    style: "secondary",
-                  },
-                  // {
-                  //   id: "join_eth_group",
-                  //   label: "ETH Group",
-                  //   imageUrl: "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760463829/Ethereum_Foundation_Logo_Vector_xddxiu.svg",
-                  //   style: "secondary"
-                  // },
-                  {
-                    id: "join_xmtp_group",
-                    label: "XMTP Group",
-                    imageUrl:
-                      "https://d392zik6ho62y0.cloudfront.net/images/xmtp-logo.png",
-                    style: "secondary",
-                  },
-                  {
-                    id: "join_groups",
-                    label: "More Groups",
-                    imageUrl:
-                      "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760464996/vecteezy_join-group-icon-in-trendy-outline-style-isolated-on-white_32201148_mkmtik.jpg",
-                    style: "secondary",
-                  },
-                  {
-                    id: "treasure_hunt",
-                    label: "Treasure Hunt",
-                    imageUrl:
-                      "https://res.cloudinary.com/dg5qvbxjp/image/upload/v1760561042/ChatGPT_Image_Oct_15_2025_at_05_43_44_PM_wwnxiq.png",
-                    style: "secondary",
-                  },
-                ],
-              };
+              // Generate menu based on context (treasure hunt group vs other)
+              const mainMenuActionsContent = generateMenuForContext(ctx.conversation.id);
+              
               console.log(
                 `🎯 Sending main menu with ${mainMenuActionsContent.actions.length} actions`
               );
