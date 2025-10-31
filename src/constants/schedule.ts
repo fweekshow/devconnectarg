@@ -49,6 +49,10 @@ export const SPEAKERS_DATA = {
     bio: "Privacy-focused smart contract development",
   },
   WalletConnect: { title: "WalletCon", bio: "Wallet infrastructure and UX" },
+  SheFi: {
+    title: "SheFi Summit Buenos Aires",
+    bio: "Women-led summit featuring panels, networking & activations. Sponsored by Octant, Binance, Avalanche, Celo, Mento, and Stacks.",
+  },
 };
 
 export const SCHEDULE_DATA = {
@@ -64,6 +68,7 @@ export const SCHEDULE_DATA = {
     events: [
       "All Day: Staking Summit (continues) - Day 2 of the Staking Summit.",
       "All Day: Ethereum Cypherpunk Congress 2 - Organized by Web3 Privacy Now. Tickets Required. 1500 capacity. Mixed Format. All Welcome.",
+      "All Day: SheFi Summit Buenos Aires - Women-led summit with panels, networking & activations. Organized by SheFi. Tickets Required. Mixed Format. All Welcome. Link: https://luma.com/y9pgwz8b",
       "10:00 AM - 4:00 PM: Governance Day Devconnect BA 2025 (Day 2: Research Track) - Organized by SEED Gov. Tickets Required. 70 capacity. Workshop. Intermediate.",
       "2:00 PM - 8:00 PM: Wondercon - Organized by Wonderland. Talks. Expert level.",
     ],
