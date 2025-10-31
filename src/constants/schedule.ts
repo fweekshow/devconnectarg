@@ -147,7 +147,7 @@ export const SCHEDULE_DATA = {
       "11:00 AM - 1:00 PM: University Track - Trama (ITBA) - Included in Ticket. 180 capacity. Mixed Format. Beginner.",
       "1:00 PM: ETH/ACC DEMO DAY - a0x will be presenting at ETH/ACC DEMO DAY. Organized by Odisea Labs. Included in Ticket. 500 capacity. Mixed Format. All Welcome. https://luma.com/2dmmtz78 ",
       "All Day: Bridge Atlas - Organized by Summer of Protocols. Signup Required. 100 capacity. Workshop. All Welcome.",
-    ],
+    ]
   },
   sunday_nov23: {
     title: "Sunday Nov 23 — ETHGlobal Continues",
