@@ -56,7 +56,7 @@ export class TextCallbackHandler implements ICallbackHandler {
         console.log(`📨 NEW MESSAGE RECEIVED`);
         console.log(`   Conversation ID: ${conversationId}`);
         console.log(`   Type: ${isGroup ? "GROUP" : "DM"}`);
-        console.log(`   Group Name: ${ctx.conversation.name || "N/A"}`);
+        console.log(`   Group Name: ${(ctx.conversation as any).name || "N/A"}`);
         console.log(`   Sender: ${senderInboxId.substring(0, 12)}...`);
         console.log(`   Content: "${messageContent}"`);
         console.log(`${"=".repeat(80)}\n`);
