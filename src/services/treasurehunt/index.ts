@@ -7,11 +7,14 @@ import {
 import type { Client } from "@xmtp/node-sdk";
 import OpenAI from "openai";
 
+import { TreasureHuntAdapter } from "@/adapters/index.js";
+import { ENV } from "@/config/index.js";
 import {
   TREASURE_HUNT_CONFIG,
   TREASURE_HUNT_GROUP_IDS,
   TREASURE_HUNT_TASKS,
 } from "@/constants/index.js";
+import { TreasureHuntTask, UserCurrentTaskResult } from "@/models/index.js";
 import { XMTPServiceBase } from "@/services/xmtpServiceBase.js";
 import {
   ActionsContent,
@@ -29,7 +32,10 @@ export class TreasureHuntService extends XMTPServiceBase {
   isTreasureHuntGroup(groupId: string): boolean {
     return TREASURE_HUNT_GROUP_IDS.includes(groupId);
   }
-  async assignToTreasureHuntGroup(userInboxId: string): Promise<{
+  async assignToTreasureHuntGroup(
+    senderInboxId: string,
+    walletAddress: string
+  ): Promise<{
     success: boolean;
     groupId?: string;
     groupNumber?: number;
@@ -67,30 +73,22 @@ export class TreasureHuntService extends XMTPServiceBase {
           };
         }
 
-        await (group as any).addMembers([userInboxId]);
-        console.log(`✅ Added user ${userInboxId} to treasure hunt test group`);
+        await (group as any).addMembers([senderInboxId]);
+        console.log(
+          `✅ Added user ${senderInboxId} to treasure hunt test group`
+        );
 
-        // TODO: Get group's current progress from database
-        // const groupProgress = await getGroupProgress(testGroupId);
-        // const currentTaskIndex = groupProgress.current_task_index;
-        const currentTaskIndex = 0; // Placeholder
-        const completedTasks = 0; // Placeholder
-
-        const currentTask = TREASURE_HUNT_TASKS[currentTaskIndex];
-
-        // TODO: Record in database
-        // await recordParticipant(userInboxId, testGroupId);
-
-        // Send the group's CURRENT task (not always task 1)
         setTimeout(async () => {
-          await this.sendCurrentTaskToGroup(testGroupId);
+          await this.sendCurrentTaskToGroup(
+            testGroupId,
+            senderInboxId,
+            walletAddress
+          );
         }, 2000);
 
         // Contextual welcome message based on progress
         const welcomeMessage =
-          currentTaskIndex === 0 && completedTasks === 0
-            ? "Welcome to the Base Hunt! You've been added to your team's group chat. Get ready to work together with your teammates as you dive into the adventure!"
-            : `Welcome to the Base Hunt! You've been added to your team's group chat. Your team is currently working on Task ${currentTaskIndex + 1}: ${currentTask.title}. Jump in and help them complete it!`;
+          "Welcome to the Base Hunt! You've been added to Treasure Hunt group chat. Get ready to dive into the adventure!";
 
         return {
           success: true,
@@ -118,69 +116,68 @@ export class TreasureHuntService extends XMTPServiceBase {
   }
 
   async validateTreasureHuntSubmission(
-    taskIndex: number,
+    task: UserCurrentTaskResult,
     imageUrl: string
   ): Promise<{ valid: boolean; response: string; confidence: number }> {
     try {
-      const task = TREASURE_HUNT_TASKS[taskIndex];
-      if (!task) {
-        return {
-          valid: false,
-          response: "Invalid task index",
-          confidence: 0,
-        };
-      }
-
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      console.log(`🤖 Calling OpenAI Vision for task: ${task.title}`);
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `${task.validationPrompt}
+      const currentTask = task.currentTask!;
+      if (TreasureHuntAdapter.isTaskValid(currentTask)) {
+        const openai = new OpenAI({ apiKey: ENV.OPENAI_API_KEY });
+        console.log(`🤖 Calling OpenAI Vision for task: ${currentTask.title}`);
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: `${currentTask.validationPrompt}
 
 Please also provide a confidence score (0-100) for your assessment at the end of your response.
 
 Format: YES/NO, explanation, then "Confidence: X%"`,
-              },
-              {
-                type: "image_url",
-                image_url: { url: imageUrl },
-              },
-            ],
-          },
-        ],
-        max_tokens: 300,
-      });
+                },
+                {
+                  type: "image_url",
+                  image_url: { url: imageUrl },
+                },
+              ],
+            },
+          ],
+          max_tokens: 300,
+        });
 
-      const aiResponse = completion.choices[0].message.content || "";
-      console.log(`🤖 OpenAI response: ${aiResponse}`);
+        const aiResponse = completion.choices[0].message.content || "";
+        console.log(`🤖 OpenAI response: ${aiResponse}`);
 
-      // Parse YES/NO from response
-      const isYes = aiResponse.toUpperCase().includes("YES");
+        // Parse YES/NO from response
+        const isYes = aiResponse.toUpperCase().includes("YES");
 
-      // Extract confidence score (look for "Confidence: 85%" or "85%")
-      const confidenceMatch = aiResponse.match(/(?:confidence:?\s*)?(\d+)%/i);
-      const confidence = confidenceMatch ? parseInt(confidenceMatch[1]) : 50;
+        // Extract confidence score (look for "Confidence: 85%" or "85%")
+        const confidenceMatch = aiResponse.match(/(?:confidence:?\s*)?(\d+)%/i);
+        const confidence = confidenceMatch ? parseInt(confidenceMatch[1]) : 50;
 
-      console.log(
-        `📊 Validation result: ${isYes ? "YES" : "NO"}, Confidence: ${confidence}%`
-      );
+        console.log(
+          `📊 Validation result: ${isYes ? "YES" : "NO"}, Confidence: ${confidence}%`
+        );
 
-      // Validation succeeds only if:
-      // 1. AI says YES
-      // 2. Confidence >= 60%
-      const valid =
-        isYes && confidence >= TREASURE_HUNT_CONFIG.minConfidenceThreshold;
+        // Validation succeeds only if:
+        // 1. AI says YES
+        // 2. Confidence >= 60%
+        const valid =
+          isYes && confidence >= TREASURE_HUNT_CONFIG.minConfidenceThreshold;
 
+        return {
+          valid,
+          response: aiResponse,
+          confidence,
+        };
+      }
       return {
-        valid,
-        response: aiResponse,
-        confidence,
+        valid: false,
+        response: "Submitting before start time or after end time",
+        confidence: 0,
       };
     } catch (error: any) {
       console.error("❌ Error validating submission:", error);
@@ -233,15 +230,14 @@ Format: YES/NO, explanation, then "Confidence: X%"`,
 
   async handleTreasureHuntImageSubmission(
     groupId: string,
+    senderInboxId: string,
+    walletAddress: string,
     remoteAttachment: RemoteAttachment | Attachment
   ): Promise<string> {
     try {
       console.log(
         `🎯 Processing treasure hunt image submission in group ${groupId}`
       );
-      const currentTaskIndex = 0;
-      const task = TREASURE_HUNT_TASKS[currentTaskIndex];
-      if (!task) return "❌ Invalid task state. Please contact support.";
 
       let imageDataUri: string;
       if ("url" in remoteAttachment) {
@@ -261,9 +257,16 @@ Format: YES/NO, explanation, then "Confidence: X%"`,
       }
 
       // Validate the image
-      console.log(`🔍 Validating image for task: ${task.title}`);
+      console.log(`🔍 Validating image for task`);
+      let current = await this.ensureAndGetCurrentTask(
+        senderInboxId,
+        walletAddress
+      );
+      if (!current || !current.currentTask) {
+        return `❌ Submission not validated`;
+      }
       const validation = await this.validateTreasureHuntSubmission(
-        currentTaskIndex,
+        current,
         imageDataUri
       );
 
@@ -273,48 +276,54 @@ Format: YES/NO, explanation, then "Confidence: X%"`,
       ) {
         // Success! Advance to next task
         console.log(
-          `✅ Task ${currentTaskIndex} validated successfully (${validation.confidence}% confidence)`
+          `✅ Task ${current.currentTask.id} validated successfully (${validation.confidence}% confidence)`
         );
 
-        // TODO: Advance group to next task in database
-        // await advanceGroupToNextTask(groupId);
+        await TreasureHuntAdapter.submitCurrentTask(senderInboxId);
 
-        const nextTaskIndex = currentTaskIndex + 1;
-        if (nextTaskIndex >= TREASURE_HUNT_CONFIG.totalTasks) {
-          // Group completed all tasks!
-          return `🎉 CONGRATULATIONS! Your team completed the Treasure Hunt!
+        const stats =
+          await TreasureHuntAdapter.calculateUserStatsForToday(senderInboxId);
+        const totalTasks = await TreasureHuntAdapter.getTotalTasksForDate();
+        const updated =
+          await TreasureHuntAdapter.getUserCurrentTask(senderInboxId);
 
-🏆 You found all ${TREASURE_HUNT_CONFIG.totalTasks} items!
+        if (!updated || !updated.currentTask) {
+          return `🎉 CONGRATULATIONS! You completed the Treasure Hunt!
 
-${validation.response}
-
-Check the leaderboard to see your ranking! 📊`;
-        } else {
-          const nextTask = TREASURE_HUNT_TASKS[nextTaskIndex];
-          return `✅ Task ${currentTaskIndex + 1} Complete! (+${task.points} points)
+🏆 All ${totalTasks} challenges done.
 
 ${validation.response}
 
-🎯 Next Challenge: **${nextTask.title}**
-${nextTask.description}
-
-💡 Hint: ${nextTask.hint}
-
-📊 Progress: ${nextTaskIndex + 1}/${TREASURE_HUNT_CONFIG.totalTasks} tasks completed`;
+📊 Final Score: ${stats.totalPoints ?? 0}`;
         }
+
+        return `✅ Task ${updated.currentTask.id - 1} Complete! (+${
+          current.currentTask.points
+        } points)
+
+${validation.response}
+
+🎯 Next Challenge: **${updated.currentTask.title}**
+${updated.currentTask.description}
+
+💡 Hint: ${updated.currentTask.hint}
+
+📊 Progress: ${stats.totalCompleted ?? 0}/${totalTasks} tasks completed`;
       } else {
         // Validation failed
         console.log(
-          `❌ Task ${currentTaskIndex} validation failed (${validation.confidence}% confidence)`
+          `❌ Validation failed (${validation.confidence}% confidence)`
         );
 
         return `❌ Submission not validated
 
 ${validation.response}
 
-🔄 Try again! Make sure your photo clearly shows: ${task.description}
+🔄 Try again! Make sure your photo clearly shows: ${
+          current.currentTask.description
+        }
 
-💡 Hint: ${task.hint}`;
+💡 Hint: ${current.currentTask.hint}`;
       }
     } catch (error: any) {
       console.error("❌ Error handling image submission:", error);
@@ -322,14 +331,12 @@ ${validation.response}
     }
   }
 
-  async generateTaskSubmissionAction(taskIndex: number) {
-    const task = TREASURE_HUNT_TASKS[taskIndex];
-
+  async generateTaskSubmissionAction(task: TreasureHuntTask) {
     if (!task) return null;
 
     return {
-      id: `treasure_hunt_task_${taskIndex}`,
-      description: `🏴‍☠️ Task ${taskIndex + 1}/${TREASURE_HUNT_CONFIG.totalTasks}: ${task.title}
+      id: `treasure_hunt_task_${task.id}`,
+      description: `🏴‍☠️ Task ${task.id}: ${task.title}
 
 ${task.description}
 
@@ -350,49 +357,96 @@ ${task.description}
           label: "📖 Rules",
           style: "secondary" as const,
         },
+        {
+          id: "treasure_hunt_skip",
+          label: "⏩ Skip Task",
+          style: "secondary" as const,
+        },
       ],
     };
   }
 
-  async sendCurrentTaskToGroup(groupId: string) {
+  private async ensureAndGetCurrentTask(
+    senderInboxId: string,
+    walletAddress: string
+  ): Promise<UserCurrentTaskResult | null> {
+    let task = await TreasureHuntAdapter.getUserCurrentTask(senderInboxId);
+
+    if (!task) {
+      await TreasureHuntAdapter.initializeCurrentTaskForToday(
+        senderInboxId,
+        walletAddress
+      );
+      task = await TreasureHuntAdapter.getUserCurrentTask(senderInboxId);
+    }
+    return task;
+  }
+
+  async sendCurrentTaskToGroup(
+    groupId: string,
+    senderInboxId: string,
+    walletAddress: string
+  ) {
     try {
-      // TODO: Get current task index from database
-      const currentTaskIndex = 0; // Placeholder
-
-      const taskAction = await this.generateTaskSubmissionAction(currentTaskIndex);
-      if (!taskAction) {
-        console.error("❌ Failed to generate task action");
+      const task = await this.ensureAndGetCurrentTask(
+        senderInboxId,
+        walletAddress
+      );
+      if (task?.currentTask) {
+        const taskAction = await this.generateTaskSubmissionAction(
+          task.currentTask
+        );
+        const group =
+          await this.client.conversations.getConversationById(groupId);
+        if (group) {
+          await (group as any).send(taskAction, ContentTypeActions);
+          console.log(
+            `✅ Sent task ${task.currentTask.id} to group ${groupId}`
+          );
+        }
+      } else {
+        console.log("❌ Failed to generate task action");
         return;
-      }
-
-      const group =
-        await this.client.conversations.getConversationById(groupId);
-      if (group) {
-        await (group as any).send(taskAction, ContentTypeActions);
-        console.log(`✅ Sent task ${currentTaskIndex + 1} to group ${groupId}`);
       }
     } catch (error) {
       console.error("❌ Error sending task to group:", error);
     }
   }
 
-  async getTreasureHuntStatus(groupId: string): Promise<string> {
+  async getTreasureHuntStatus(
+    senderInboxId: string,
+    walletAddress: string
+  ): Promise<string> {
     try {
-      // TODO: Get progress from database
-      const currentTaskIndex = 0; // Placeholder
-      const completedTasks = 0; // Placeholder
-      const totalPoints = 0; // Placeholder
+      const task = await this.ensureAndGetCurrentTask(
+        senderInboxId,
+        walletAddress
+      );
+      const stats =
+        await TreasureHuntAdapter.calculateUserStatsForToday(senderInboxId);
+      const totalTasks = await TreasureHuntAdapter.getTotalTasksForDate();
 
-      const currentTask = TREASURE_HUNT_TASKS[currentTaskIndex];
+      const allDone =
+        await TreasureHuntAdapter.areAllTasksCompletedForToday(senderInboxId);
+      if (allDone) {
+        return `🎉 All your tasks for today are completed!
+
+📊 Progress: ${stats.totalCompleted ?? 0}/${totalTasks} tasks completed
+⭐ Points: ${stats.totalPoints ?? 0}
+⏩ Skipped: ${stats.totalSkipped ?? 0}`;
+      }
+
+      const currentTask = task?.currentTask;
 
       if (!currentTask) {
         return "❌ No active treasure hunt found.";
       }
 
-      return `📊 Progress: ${completedTasks}/${TREASURE_HUNT_CONFIG.totalTasks} tasks completed
-⭐ Points: ${totalPoints}
+      return `📊 Progress: ${stats.totalCompleted ?? 0}/${totalTasks} tasks completed
+⭐ Points: ${stats.totalPoints ?? 0}
+⏩ Skipped Task: ${stats.totalSkipped ?? 0}
 
-🎯 Current Task ${currentTaskIndex + 1}: ${currentTask.title}
+🎯 Current Task ${task?.currentTask?.id}: ${currentTask.title}
 ${currentTask.description}
 
 💡 Hint: ${currentTask.hint}
@@ -423,6 +477,7 @@ ${currentTask.description}
     try {
       const senderInboxId = ctx.message.senderInboxId;
       const conversationId = ctx.conversation.id;
+      const walletAddress = (await ctx.getSenderAddress()) || "";
       const isGroup = ctx.isGroup();
 
       // Check for treasure hunt image submissions (mention in treasure hunt group)
@@ -452,6 +507,8 @@ ${currentTask.description}
 
           const response = await this.handleTreasureHuntImageSubmission(
             conversationId,
+            senderInboxId,
+            walletAddress,
             storedImage.content
           );
 
@@ -466,7 +523,10 @@ ${currentTask.description}
         } else {
           console.log(`❌ No stored image in Map - showing current task...`);
 
-          const status = await this.getTreasureHuntStatus(conversationId);
+          const status = await this.getTreasureHuntStatus(
+            senderInboxId,
+            walletAddress
+          );
           await ctx.sendText(status);
           return true;
         }
@@ -533,6 +593,8 @@ ${currentTask.description}
     actionId: any
   ): Promise<boolean> {
     try {
+      const walletAddress = (await ctx.getSenderAddress()) || "";
+      const senderInboxId = ctx.message.senderInboxId;
       switch (actionId) {
         case "treasure_hunt":
           // If clicked from within a treasure hunt group, just show current task
@@ -540,13 +602,66 @@ ${currentTask.description}
             console.log(
               `🏴‍☠️ Treasure hunt button clicked in group - showing current task`
             );
-            await this.sendCurrentTaskToGroup(ctx.conversation.id);
+
+            const allDone =
+              await TreasureHuntAdapter.areAllTasksCompletedForToday(
+                senderInboxId
+              );
+            if (allDone) {
+              const stats =
+                await TreasureHuntAdapter.calculateUserStatsForToday(
+                  senderInboxId
+                );
+              const totalTasks =
+                await TreasureHuntAdapter.getTotalTasksForDate();
+
+              const completedActions: ActionsContent = {
+                id: "treasure_hunt_completed",
+                description: `🎉 All your tasks for today are completed!\n\n📊 Progress: ${
+                  stats.totalCompleted ?? 0
+                }/${totalTasks} tasks completed\n⭐ Points: ${
+                  stats.totalPoints ?? 0
+                }\n⏩ Skipped: ${stats.totalSkipped ?? 0}`,
+                actions: [
+                  {
+                    id: "treasure_hunt_status",
+                    label: "📊 View Progress",
+                    style: "secondary" as const,
+                  },
+                  {
+                    id: "treasure_hunt_rules",
+                    label: "📖 Rules",
+                    style: "secondary" as const,
+                  },
+                  {
+                    id: "treasure_hunt_skip",
+                    label: "⏩ Skip Task",
+                    style: "secondary" as const,
+                  },
+                ],
+              };
+
+              const group = await ctx.client.conversations.getConversationById(
+                ctx.conversation.id
+              );
+              if (group) {
+                await (group as any).send(completedActions, ContentTypeActions);
+              }
+              return true;
+            }
+
+            await this.sendCurrentTaskToGroup(
+              ctx.conversation.id,
+              senderInboxId,
+              walletAddress
+            );
             return true;
           }
 
           // In DM - assign to group with welcome message
           const treasureHuntResult = await this.assignToTreasureHuntGroup(
-            ctx.message.senderInboxId
+            senderInboxId,
+            walletAddress
           );
 
           const treasureHuntActionsContent: ActionsContent = {
@@ -581,16 +696,22 @@ Is there anything else I can help with?`,
 
         case "treasure_hunt_status":
           const statusMessage = await this.getTreasureHuntStatus(
-            ctx.conversation.id
+            senderInboxId,
+            walletAddress
           );
           await ctx.sendText(statusMessage);
+          return true;
+
+        case "treasure_hunt_skip":
+          await TreasureHuntAdapter.skipCurrentTask(senderInboxId);
+          await ctx.sendText(`You have skipped the current task.`);
           return true;
 
         case "treasure_hunt_rules":
           await ctx.sendText(`🏴‍☠️ Treasure Hunt Rules
 
 📋 How it works:
-1️⃣ Complete 10 photo challenges with your team
+1️⃣ Complete photo challenges
 2️⃣ Send photos in this group chat to submit
 3️⃣ Rocky validates each photo with AI
 4️⃣ Pass requires YES + 60%+ confidence

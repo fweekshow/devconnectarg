@@ -527,6 +527,98 @@ export class TreasureHuntAdapter {
     return true;
   }
 
+  static async calculateUserStatsForToday(
+    senderInboxId: string,
+    huntDate?: string
+  ): Promise<Record<string, any>> {
+    const effectiveDate = huntDate
+      ? huntDate.slice(0, 10)
+      : new Date().toISOString().slice(0, 10);
+
+    const { rows } = await db.query(
+      `
+      SELECT uth.stats
+      FROM user_treasure_hunt uth
+      JOIN treasure_hunt h ON h.id = uth.hunt_id
+      WHERE uth.sender_inbox_id = $1 AND h.hunt_date = $2
+    `,
+      [senderInboxId, effectiveDate]
+    );
+
+    const stats = rows[0]?.stats || null;
+    if (stats && typeof stats === "object") return stats;
+
+    return {
+      totalPoints: 0,
+      totalCompleted: 0,
+      totalSkipped: 0,
+      categories: {},
+    };
+  }
+
+  static async areAllTasksCompletedForToday(
+    senderInboxId: string,
+    huntDate?: string
+  ): Promise<boolean> {
+    const effectiveDate = huntDate
+      ? huntDate.slice(0, 10)
+      : new Date().toISOString().slice(0, 10);
+
+    const { rows } = await db.query(
+      `
+      SELECT uth.id as user_hunt_id, h.id as hunt_id, h.total_tasks
+      FROM user_treasure_hunt uth
+      JOIN treasure_hunt h ON h.id = uth.hunt_id
+      WHERE uth.sender_inbox_id = $1 AND h.hunt_date = $2
+    `,
+      [senderInboxId, effectiveDate]
+    );
+    const header = rows[0];
+    if (!header) return false;
+
+    const userHuntId = header.user_hunt_id as number;
+    const huntId = header.hunt_id as number;
+    const totalTasks: number =
+      typeof header.total_tasks === "number" ? header.total_tasks : 0;
+
+    const total = totalTasks || (
+      (
+        await db.query(
+          `SELECT COUNT(*)::int AS cnt FROM treasure_hunt_task WHERE hunt_id = $1`,
+          [huntId]
+        )
+      ).rows[0]?.cnt || 0
+    );
+    if (total === 0) return false;
+
+    const { rows: progressRows } = await db.query(
+      `
+      SELECT COUNT(*)::int AS cnt
+      FROM user_task_progress
+      WHERE user_hunt_id = $1 AND status IN ('completed','skipped')
+    `,
+      [userHuntId]
+    );
+    const done = progressRows[0]?.cnt || 0;
+
+    return done >= total;
+  }
+
+  static async getTotalTasksForDate(huntDate?: string): Promise<number> {
+    const effectiveDate = huntDate
+      ? huntDate.slice(0, 10)
+      : new Date().toISOString().slice(0, 10);
+
+    const { rows } = await db.query(
+      `SELECT id, total_tasks FROM treasure_hunt WHERE hunt_date = $1`,
+      [effectiveDate]
+    );
+    const hunt = rows[0];
+    if (!hunt) return 0;
+
+    return hunt.total_tasks;
+  }
+
   private static async upsertUserTaskProgress(
     userHuntId: number,
     taskId: number,
