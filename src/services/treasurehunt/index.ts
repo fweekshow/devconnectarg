@@ -12,7 +12,6 @@ import { ENV } from "@/config/index.js";
 import {
   TREASURE_HUNT_CONFIG,
   TREASURE_HUNT_GROUP_IDS,
-  TREASURE_HUNT_TASKS,
 } from "@/constants/index.js";
 import { TreasureHuntTask, UserCurrentTaskResult } from "@/models/index.js";
 import { XMTPServiceBase } from "@/services/xmtpServiceBase.js";
