@@ -40,7 +40,7 @@ export class XMTPAgent {
 
   async initFromEnv(): Promise<void> {
     try {
-      const dbPath = XMTPClient.getDbPath("xmtp-agent");
+      const dbPath = XMTPClient.getDbPath("devconnect-agent");
       this.agent = await Agent.createFromEnv({
         env: (ENV.XMTP_ENV as "dev" | "production") || "production",
         dbPath,
