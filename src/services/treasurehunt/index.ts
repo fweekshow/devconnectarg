@@ -290,7 +290,7 @@ Format: YES/NO, explanation, then "Confidence: X%"`,
         console.log(`✅ Using inline attachment: ${attachment.filename}`);
       }
 
-      // Get the CURRENTLY ACTIVE task based on time (including 15-min grace period)
+      // Get the CURRENTLY ACTIVE task based on time (including 15-min grace period before AND after)
       console.log(`🔍 Finding currently active task based on time...`);
       const allTasks = await TreasureHuntAdapter.getAllTasks();
       const now = new Date();
@@ -301,9 +301,10 @@ Format: YES/NO, explanation, then "Confidence: X%"`,
         const endTime = task.endTime ? new Date(task.endTime) : null;
         if (!startTime || !endTime) return false;
         
-        // Task is valid if we're between start time and end time + 15 minutes
+        // Task is valid from 15 min BEFORE start to 15 min AFTER end
+        const startTimeWithGrace = new Date(startTime.getTime() - GRACE_PERIOD_MS);
         const endTimeWithGrace = new Date(endTime.getTime() + GRACE_PERIOD_MS);
-        return now >= startTime && now <= endTimeWithGrace;
+        return now >= startTimeWithGrace && now <= endTimeWithGrace;
       });
 
       if (!activeTask) {
