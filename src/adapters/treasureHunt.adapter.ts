@@ -55,8 +55,8 @@ export class TreasureHuntAdapter {
         validation_prompt TEXT,
         hint TEXT,
         points INT DEFAULT 0,
-        start_time TIMESTAMP ,
-        end_time TIMESTAMP ,
+        start_time TIMESTAMPTZ ,
+        end_time TIMESTAMPTZ ,
         category VARCHAR(32),
         metadata JSONB DEFAULT '{}'::JSONB,
         created_at TIMESTAMP DEFAULT now()
@@ -106,6 +106,7 @@ export class TreasureHuntAdapter {
     `);
 
     await db.query(`
+      DROP TRIGGER IF EXISTS trg_update_treasure_hunt_updated_at ON treasure_hunt;
       CREATE TRIGGER trg_update_treasure_hunt_updated_at
       BEFORE UPDATE ON treasure_hunt
       FOR EACH ROW
@@ -113,6 +114,7 @@ export class TreasureHuntAdapter {
     `);
 
     await db.query(`
+      DROP TRIGGER IF EXISTS trg_update_user_treasure_hunt_updated_at ON user_treasure_hunt;
       CREATE TRIGGER trg_update_user_treasure_hunt_updated_at
       BEFORE UPDATE ON user_treasure_hunt
       FOR EACH ROW
@@ -513,6 +515,10 @@ export class TreasureHuntAdapter {
     const endTime = task.endTime ? new Date(task.endTime) : null;
 
     console.log("🕒 Task Validation Check:");
+    console.log(`   Current time: ${now.toISOString()} (${now.toLocaleString()})`);
+    console.log(`   Task start:   ${startTime?.toISOString()} (${startTime?.toLocaleString()})`);
+    console.log(`   Task end:     ${endTime?.toISOString()} (${endTime?.toLocaleString()})`);
+    
     if (startTime && now < startTime) {
       console.log("❌ Task not valid yet — starts in the future.");
       return false;

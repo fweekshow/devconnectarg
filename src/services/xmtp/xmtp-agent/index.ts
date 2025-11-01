@@ -17,6 +17,7 @@ import { ActivityGroupsService } from "@/services/groups/groups-activity/index.j
 import { SidebarGroupsService } from "@/services/groups/groups-sidebar/index.js";
 import { DynamicGroupsService } from "@/services/groups/groups-dynamic/index.js";
 import { TreasureHuntService } from "@/services/treasurehunt/index.js";
+import { TreasureHuntDispatcher } from "@/services/treasurehunt/dispatcher.js";
 import { ReminderDispatcher } from "@/services/reminders/index.js";
 
 import { CallbackRegistry } from "./callbackRegistry.js";
@@ -36,6 +37,7 @@ export class XMTPAgent {
     dynamicGroups?: DynamicGroupsService;
     treasureHunt?: TreasureHuntService;
     reminderDispatcher?: ReminderDispatcher;
+    treasureHuntDispatcher?: TreasureHuntDispatcher;
   } = {};
 
   async initFromEnv(): Promise<void> {
@@ -83,11 +85,15 @@ export class XMTPAgent {
 
     this.servicesClient.reminderDispatcher = new ReminderDispatcher();
     this.servicesClient.reminderDispatcher.start(this.getClient());
+    
+    this.servicesClient.treasureHuntDispatcher = new TreasureHuntDispatcher();
+    this.servicesClient.treasureHuntDispatcher.start(this.getClient());
   }
 
   cleanup() {
     console.log("🛑 Shutting down agent...");
     this.servicesClient.reminderDispatcher?.stop();
+    this.servicesClient.treasureHuntDispatcher?.stop();
     process.exit(0);
   }
 

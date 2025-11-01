@@ -36,7 +36,7 @@ export class MessageCallbackHandler implements ICallbackHandler {
           console.log(`🎯 QUICK ACTION RECEIVED`);
           console.log(`   Conversation ID: ${ctx.conversation.id}`);
           console.log(`   Type: ${ctx.isGroup() ? "GROUP" : "DM"}`);
-          console.log(`   Group Name: ${ctx.conversation.name || "N/A"}`);
+          console.log(`   Group Name: ${(ctx.conversation as any).name || "N/A"}`);
           console.log(`   Action ID: ${actionId}`);
           console.log(`   Original Actions ID: ${originalActionsId}`);
           console.log(`   Content Type: ${contentTypeId}`);

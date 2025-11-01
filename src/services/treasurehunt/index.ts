@@ -77,23 +77,58 @@ export class TreasureHuntService extends XMTPServiceBase {
           `✅ Added user ${senderInboxId} to treasure hunt test group`
         );
 
+        // Check if there's an active task now
+        const currentTask = await this.ensureAndGetCurrentTask(
+          senderInboxId,
+          walletAddress
+        );
+
+        // Send contextual welcome message to the GROUP CHAT
+        let groupWelcomeMessage: string;
+        
+        if (currentTask?.currentTask && TreasureHuntAdapter.isTaskValid(currentTask.currentTask)) {
+          // Task is active now - send it
+          setTimeout(async () => {
+            await this.sendCurrentTaskToGroup(
+              testGroupId,
+              senderInboxId,
+              walletAddress
+            );
+          }, 2000);
+          groupWelcomeMessage = "🏴‍☠️ Welcome to your Treasure Hunt Group!\n\nYour first challenge is ready - check the message above!";
+        } else {
+          // No active task - tell them when next one starts
+          const allTasks = await TreasureHuntAdapter.getAllTasks();
+          const now = new Date();
+          const nextTask = allTasks.find(task => {
+            const startTime = task.startTime ? new Date(task.startTime) : null;
+            return startTime && now < startTime;
+          });
+
+          if (nextTask) {
+            const startTime = new Date(nextTask.startTime);
+            const formattedTime = startTime.toLocaleString('en-US', { 
+              hour: '2-digit', 
+              minute: '2-digit',
+              timeZone: 'America/Argentina/Buenos_Aires'
+            });
+            groupWelcomeMessage = `🏴‍☠️ Welcome to your Treasure Hunt Group!\n\nYour next task starts at ${formattedTime} Argentina time.\n\nWe'll notify you here when it begins. Stay tuned!`;
+          } else {
+            groupWelcomeMessage = "🏴‍☠️ Welcome to your Treasure Hunt Group!\n\nWe'll notify you here when the next challenge begins. Stay tuned!";
+          }
+        }
+
+        // Send welcome message to the group chat
         setTimeout(async () => {
-          await this.sendCurrentTaskToGroup(
-            testGroupId,
-            senderInboxId,
-            walletAddress
-          );
-        }, 2000);
+          await group.send(groupWelcomeMessage);
+        }, 1000);
 
-        // Contextual welcome message based on progress
-        const welcomeMessage =
-          "Welcome to the Base Hunt! You've been added to Treasure Hunt group chat. Get ready to dive into the adventure!";
-
+        // Return simple success message for DM
         return {
           success: true,
           groupId: testGroupId,
           groupNumber: 1,
-          message: welcomeMessage,
+          message: "Welcome to the Base Hunt! You've been added to your team's group chat. Get ready to work together with your teammates as you dive into the adventure!",
         };
       } catch (addError: any) {
         if (addError.message?.includes("already")) {
@@ -255,17 +290,41 @@ Format: YES/NO, explanation, then "Confidence: X%"`,
         console.log(`✅ Using inline attachment: ${attachment.filename}`);
       }
 
-      // Validate the image
-      console.log(`🔍 Validating image for task`);
+      // Get the CURRENTLY ACTIVE task based on time (including 15-min grace period)
+      console.log(`🔍 Finding currently active task based on time...`);
+      const allTasks = await TreasureHuntAdapter.getAllTasks();
+      const now = new Date();
+      const GRACE_PERIOD_MS = 15 * 60 * 1000; // 15 minutes
+      
+      const activeTask = allTasks.find(task => {
+        const startTime = task.startTime ? new Date(task.startTime) : null;
+        const endTime = task.endTime ? new Date(task.endTime) : null;
+        if (!startTime || !endTime) return false;
+        
+        // Task is valid if we're between start time and end time + 15 minutes
+        const endTimeWithGrace = new Date(endTime.getTime() + GRACE_PERIOD_MS);
+        return now >= startTime && now <= endTimeWithGrace;
+      });
+
+      if (!activeTask) {
+        return `❌ No treasure hunt is currently active. Please wait for the next challenge announcement!`;
+      }
+
+      console.log(`🎯 Active task found: Task ${activeTask.id} - ${activeTask.title}`);
+
+      // Now get user's current task assignment for tracking
       let current = await this.ensureAndGetCurrentTask(
         senderInboxId,
         walletAddress
       );
-      if (!current || !current.currentTask) {
+      
+      if (!current) {
         return `❌ Submission not validated`;
       }
+
+      // Validate against the ACTIVE task
       const validation = await this.validateTreasureHuntSubmission(
-        current,
+        { ...current, currentTask: activeTask },
         imageDataUri
       );
 
@@ -275,7 +334,7 @@ Format: YES/NO, explanation, then "Confidence: X%"`,
       ) {
         // Success! Advance to next task
         console.log(
-          `✅ Task ${current.currentTask.id} validated successfully (${validation.confidence}% confidence)`
+          `✅ Task ${activeTask.id} validated successfully (${validation.confidence}% confidence)`
         );
 
         await TreasureHuntAdapter.submitCurrentTask(senderInboxId);
@@ -283,10 +342,20 @@ Format: YES/NO, explanation, then "Confidence: X%"`,
         const stats =
           await TreasureHuntAdapter.calculateUserStatsForToday(senderInboxId);
         const totalTasks = await TreasureHuntAdapter.getTotalTasksForDate();
-        const updated =
-          await TreasureHuntAdapter.getUserCurrentTask(senderInboxId);
+        
+        // Find the NEXT task by time (not by user progress)
+        const sortedTasks = [...allTasks].sort((a, b) => {
+          const aStart = a.startTime ? new Date(a.startTime).getTime() : 0;
+          const bStart = b.startTime ? new Date(b.startTime).getTime() : 0;
+          return aStart - bStart;
+        });
+        
+        const nextTaskByTime = sortedTasks.find(task => {
+          const startTime = task.startTime ? new Date(task.startTime) : null;
+          return startTime && now < startTime;
+        });
 
-        if (!updated || !updated.currentTask) {
+        if (!nextTaskByTime) {
           return `🎉 CONGRATULATIONS! You completed the Treasure Hunt!
 
 🏆 All ${totalTasks} challenges done.
@@ -296,18 +365,22 @@ ${validation.response}
 📊 Final Score: ${stats.totalPoints ?? 0}`;
         }
 
-        return `✅ Task ${updated.currentTask.id - 1} Complete! (+${
-          current.currentTask.points
+        const nextStartTime = new Date(nextTaskByTime.startTime);
+        const formattedTime = nextStartTime.toLocaleString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          timeZone: 'America/Argentina/Buenos_Aires'
+        });
+
+        return `✅ Task ${activeTask.id} Complete! (+${
+          activeTask.points
         } points)
 
 ${validation.response}
 
-🎯 Next Challenge: **${updated.currentTask.title}**
-${updated.currentTask.description}
+📊 Progress: ${stats.totalCompleted ?? 0}/${totalTasks} tasks completed
 
-💡 Hint: ${updated.currentTask.hint}
-
-📊 Progress: ${stats.totalCompleted ?? 0}/${totalTasks} tasks completed`;
+⏰ Next challenge starts at ${formattedTime} Argentina time. Stay tuned for the announcement! 🏴‍☠️`;
       } else {
         // Validation failed
         console.log(
@@ -318,11 +391,9 @@ ${updated.currentTask.description}
 
 ${validation.response}
 
-🔄 Try again! Make sure your photo clearly shows: ${
-          current.currentTask.description
-        }
+🔄 Try again! Make sure your photo clearly shows: ${activeTask.description}
 
-💡 Hint: ${current.currentTask.hint}`;
+💡 Hint: ${activeTask.hint}`;
       }
     } catch (error: any) {
       console.error("❌ Error handling image submission:", error);
@@ -348,17 +419,12 @@ ${task.description}
       actions: [
         {
           id: "treasure_hunt_status",
-          label: "📊 View Progress",
+          label: "📊 My Progress & Next Task",
           style: "secondary" as const,
         },
         {
           id: "treasure_hunt_rules",
           label: "📖 Rules",
-          style: "secondary" as const,
-        },
-        {
-          id: "treasure_hunt_skip",
-          label: "⏩ Skip Task",
           style: "secondary" as const,
         },
       ],
@@ -431,26 +497,53 @@ ${task.description}
         return `🎉 All your tasks for today are completed!
 
 📊 Progress: ${stats.totalCompleted ?? 0}/${totalTasks} tasks completed
-⭐ Points: ${stats.totalPoints ?? 0}
-⏩ Skipped: ${stats.totalSkipped ?? 0}`;
+⭐ Points: ${stats.totalPoints ?? 0}`;
       }
 
       const currentTask = task?.currentTask;
 
       if (!currentTask) {
-        return "❌ No active treasure hunt found.";
+        // No active task - check when next one starts
+        const allTasks = await TreasureHuntAdapter.getAllTasks();
+        const now = new Date();
+        const nextTask = allTasks.find(t => {
+          const startTime = t.startTime ? new Date(t.startTime) : null;
+          return startTime && now < startTime;
+        });
+
+        if (nextTask) {
+          const startTime = new Date(nextTask.startTime);
+          const formattedTime = startTime.toLocaleString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            timeZone: 'America/Argentina/Buenos_Aires'
+          });
+          return `📊 Your Progress
+
+📈 Tasks Completed: ${stats.totalCompleted ?? 0}/${totalTasks}
+⭐ Points Earned: ${stats.totalPoints ?? 0}
+
+⏰ Next challenge starts at ${formattedTime} Argentina time
+
+You'll be notified here when it begins! 🏴‍☠️`;
+        }
+        return `📊 Your Progress
+
+📈 Tasks Completed: ${stats.totalCompleted ?? 0}/${totalTasks}
+⭐ Points Earned: ${stats.totalPoints ?? 0}
+
+⏸️ No active challenges right now. Stay tuned for announcements! 🏴‍☠️`;
       }
 
-      return `📊 Progress: ${stats.totalCompleted ?? 0}/${totalTasks} tasks completed
-⭐ Points: ${stats.totalPoints ?? 0}
-⏩ Skipped Task: ${stats.totalSkipped ?? 0}
+      // Show progress for active task (no spoilers about future tasks)
+      return `📊 Your Progress
 
-🎯 Current Task ${task?.currentTask?.id}: ${currentTask.title}
-${currentTask.description}
+📈 Tasks Completed: ${stats.totalCompleted ?? 0}/${totalTasks}
+⭐ Points Earned: ${stats.totalPoints ?? 0}
 
-💡 Hint: ${currentTask.hint}
+🎯 Current Challenge: ${currentTask.title}
 
-📸 Send a photo and tag @devconnectarg.base.eth to submit!`;
+You know what to do - submit your photo! 📸`;
     } catch (error) {
       console.error("❌ Error getting treasure hunt status:", error);
       return "❌ Failed to retrieve treasure hunt status.";
@@ -620,21 +713,16 @@ ${currentTask.description}
                   stats.totalCompleted ?? 0
                 }/${totalTasks} tasks completed\n⭐ Points: ${
                   stats.totalPoints ?? 0
-                }\n⏩ Skipped: ${stats.totalSkipped ?? 0}`,
+                }`,
                 actions: [
                   {
                     id: "treasure_hunt_status",
-                    label: "📊 View Progress",
+                    label: "📊 My Progress & Next Task",
                     style: "secondary" as const,
                   },
                   {
                     id: "treasure_hunt_rules",
                     label: "📖 Rules",
-                    style: "secondary" as const,
-                  },
-                  {
-                    id: "treasure_hunt_skip",
-                    label: "⏩ Skip Task",
                     style: "secondary" as const,
                   },
                 ],
@@ -701,21 +789,19 @@ Is there anything else I can help with?`,
           await ctx.sendText(statusMessage);
           return true;
 
-        case "treasure_hunt_skip":
-          await TreasureHuntAdapter.skipCurrentTask(senderInboxId);
-          await ctx.sendText(`You have skipped the current task.`);
-          return true;
-
         case "treasure_hunt_rules":
           await ctx.sendText(`🏴‍☠️ Treasure Hunt Rules
 
 📋 How it works:
-1️⃣ Complete photo challenges
-2️⃣ Send photos in this group chat to submit
+1️⃣ Complete photo challenges within their time windows
+2️⃣ Send photos in this group chat and tag @devconnectarg.base.eth
 3️⃣ Rocky validates each photo with AI
 4️⃣ Pass requires YES + 60%+ confidence
-5️⃣ First team to complete all tasks wins!
+5️⃣ When a task window ends, we'll broadcast the next challenge to this group
+6️⃣ First team to complete all tasks wins!
 
+⏱️ Each task has a specific time window - complete it before time runs out!
+📣 You'll be notified here when new challenges begin!
 ⭐ Most tasks worth 10 points each
 
 🎯 Work together and have fun! 🍀`);

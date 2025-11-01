@@ -3,8 +3,16 @@
 import { TreasureHuntAdapter } from "@/adapters/index.js";
 import { connectDb, ENV } from "@/config/index.js";
 
+// Set up mock treasure hunt times for testing
 const today = new Date();
-today.setDate(today.getDate() + 1);
+
+// Helper to create Argentina time for today
+const createArgentinaTime = (hour: number, minute: number) => {
+  const d = new Date();
+  // Create time in Argentina timezone (UTC-3)
+  d.setHours(hour, minute, 0, 0);
+  return d;
+};
 
 const toISOString = (date: Date) => {
   return date.toISOString();
@@ -32,8 +40,8 @@ const TEMP_TREASURE_HUNT_TASKS = [
     hint: "XMTP Stage, Wednesday 11/19 at 10am. Look for the blue and yellow geometric art!",
     points: 10,
     category: "xmtp",
-    startTime: toISOString(addHours(today, 1)),
-    endTime: toISOString(addHours(today, 2)),
+    startTime: toISOString(createArgentinaTime(16, 30)), // 4:30 PM Argentina
+    endTime: toISOString(createArgentinaTime(17, 0)), // 5:00 PM Argentina
   },
   {
     title: "The Hand of God",
@@ -44,8 +52,8 @@ const TEMP_TREASURE_HUNT_TASKS = [
     hint: "Look for street art honoring the greatest footballer Argentina ever produced!",
     points: 10,
     category: "base",
-    startTime: toISOString(addMinutes(addHours(today, 2), 30)),
-    endTime: toISOString(addMinutes(addHours(today, 3), 30)),
+    startTime: toISOString(createArgentinaTime(17, 30)), // 5:30 PM Argentina
+    endTime: toISOString(createArgentinaTime(18, 0)), // 6:00 PM Argentina
   },
   {
     title: "Find a Spoon",
@@ -55,8 +63,8 @@ const TEMP_TREASURE_HUNT_TASKS = [
     hint: "Right next to the forks!",
     points: 10,
     category: "base",
-    startTime: toISOString(addMinutes(addHours(today, 3), 60)),
-    endTime: toISOString(addMinutes(addHours(today, 4), 60)),
+    startTime: toISOString(createArgentinaTime(19, 45)), // 7:45 PM Argentina
+    endTime: toISOString(createArgentinaTime(20, 15)), // 8:15 PM Argentina
   },
   {
     title: "Find a Fork",
@@ -65,8 +73,8 @@ const TEMP_TREASURE_HUNT_TASKS = [
     hint: "Right next to the spoons!",
     points: 10,
     category: "xmtp",
-    startTime: toISOString(addMinutes(addHours(today, 4), 90)),
-    endTime: toISOString(addMinutes(addHours(today, 5), 90)),
+    startTime: toISOString(createArgentinaTime(20, 20)), // 8:20 PM Argentina
+    endTime: toISOString(createArgentinaTime(20, 50)), // 8:50 PM Argentina
   },
   {
     title: "Find a Cup",
@@ -76,8 +84,8 @@ const TEMP_TREASURE_HUNT_TASKS = [
     hint: "Perfect for coffee or tea!",
     points: 10,
     category: "base",
-    startTime: toISOString(addMinutes(addHours(today, 5), 120)),
-    endTime: toISOString(addMinutes(addHours(today, 6), 120)),
+    startTime: toISOString(createArgentinaTime(20, 55)), // 8:55 PM Argentina
+    endTime: toISOString(createArgentinaTime(21, 25)), // 9:25 PM Argentina
   },
 ];
 
@@ -91,7 +99,14 @@ async function initializeTreasureHunt() {
       ENV.DATABASE_URL ? `${ENV.DATABASE_URL.substring(0, 50)}...` : "NOT SET"
     );
     console.log("🔍 NODE_ENV:", ENV.NODE_ENV);
-    // await TreasureHuntAdapter.dropTables()
+    console.log(`🕒 Script running at: ${today.toISOString()} (UTC)`);
+    console.log(`🕒 Script running at: ${today.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' })} (Argentina)`);
+    console.log(`🕒 First task will start at: ${toISOString(today)}`);
+    
+    // Drop and recreate tables to refresh task times
+    console.log("Dropping existing treasure hunt tables...");
+    await TreasureHuntAdapter.dropTables();
+    
     // Create tables first
     console.log("Creating treasure hunt tables...");
     await TreasureHuntAdapter.createTable();

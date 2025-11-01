@@ -49,6 +49,14 @@ export const SPEAKERS_DATA = {
     bio: "Privacy-focused smart contract development",
   },
   WalletConnect: { title: "WalletCon", bio: "Wallet infrastructure and UX" },
+  "Stellar Week": {
+    title: "DevconnectHER - Career Lab & Job Fair",
+    bio: "Women-in-tech event featuring career coaching, job fair, 1:1 mentoring, professional headshots, and LinkedIn optimization. Hosted by dev3pack, Mujeres en Crypto, and SHEBN.",
+  },
+  SheFi: {
+    title: "SheFi Summit Buenos Aires",
+    bio: "Women-led summit featuring panels, networking & activations. Sponsored by Octant, Binance, Avalanche, Celo, Mento, and Stacks.",
+  },
 };
 
 export const SCHEDULE_DATA = {
@@ -64,6 +72,7 @@ export const SCHEDULE_DATA = {
     events: [
       "All Day: Staking Summit (continues) - Day 2 of the Staking Summit.",
       "All Day: Ethereum Cypherpunk Congress 2 - Organized by Web3 Privacy Now. Tickets Required. 1500 capacity. Mixed Format. All Welcome.",
+      "All Day: SheFi Summit Buenos Aires - Women-led summit with panels, networking & activations. Organized by SheFi. Tickets Required. Mixed Format. All Welcome. Link: https://luma.com/y9pgwz8b",
       "10:00 AM - 4:00 PM: Governance Day Devconnect BA 2025 (Day 2: Research Track) - Organized by SEED Gov. Tickets Required. 70 capacity. Workshop. Intermediate.",
       "2:00 PM - 8:00 PM: Wondercon - Organized by Wonderland. Talks. Expert level.",
     ],
@@ -85,6 +94,7 @@ export const SCHEDULE_DATA = {
       "10:00 AM - 6:00 PM: The Bankless Summit - Organized by Bankless. Talks. All Welcome.",
       "10:00 AM - 8:00 PM: SENSEI MAGIC - Organized by SenseiNode. Mixed Format. All Welcome.",
       "11:00 AM - 6:00 PM: Money Rails - Organized by Polygon. Signup Required. 500 capacity. Mixed Format. All Welcome.",
+      "4:00 PM - 7:00 PM: DevconnectHER - Career Lab & Job Fair - Women-in-tech event with career coaching, job fair, mentoring, headshots & networking. Organized by Stellar Week, dev3pack, Mujeres en Crypto. Approval Required. Mixed Format. All Welcome. Link: https://luma.com/pemxxxda",
       "All Day: ETHCON ARGENTINA 2025 - Organized by ETHCON Core Team. Signup Required. 4000 capacity. Presentation. All Welcome.",
       "All Day: Web3Design - UX Unconference - Organized by Web3Design. Details Soon. Mixed Format. All Welcome.",
       "All Day: EthStaker's Staking Gathering - Organized by EthStaker. Tickets Required. Mixed Format. All Welcome.",
