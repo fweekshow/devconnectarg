@@ -48,16 +48,19 @@ export class TreasureHuntDispatcher {
         return aStart - bStart;
       });
 
-      // Check for tasks that just started (send "Starts Now" message)
+      // Check for tasks where grace period just started (15 min before official start)
+      const GRACE_PERIOD_MS = 15 * 60 * 1000; // 15 minutes
       for (const task of sortedTasks) {
         const startTime = task.startTime ? new Date(task.startTime) : null;
         if (!startTime) continue;
         
-        const timeSinceStart = now.getTime() - startTime.getTime();
+        // Grace period starts 15 minutes before the official start time
+        const graceStartTime = new Date(startTime.getTime() - GRACE_PERIOD_MS);
+        const timeSinceGraceStart = now.getTime() - graceStartTime.getTime();
         
-        // If task started within the last 60 seconds and we haven't sent notification yet
-        if (timeSinceStart >= 0 && timeSinceStart < 60_000 && !this.warningsSent.has(task.id)) {
-          console.log(`🎯 Task ${task.id} just started - sending "Starts Now" message`);
+        // If grace period started within the last 60 seconds and we haven't sent notification yet
+        if (timeSinceGraceStart >= 0 && timeSinceGraceStart < 60_000 && !this.warningsSent.has(task.id)) {
+          console.log(`🎯 Task ${task.id} grace period started - sending "Starts Now" message`);
           await this.broadcastTaskStarting(task);
           this.warningsSent.add(task.id);
         }

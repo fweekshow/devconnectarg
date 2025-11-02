@@ -155,10 +155,10 @@ export class TreasureHuntService extends XMTPServiceBase {
   ): Promise<{ valid: boolean; response: string; confidence: number }> {
     try {
       const currentTask = task.currentTask!;
-      if (TreasureHuntAdapter.isTaskValid(currentTask)) {
-        const openai = new OpenAI({ apiKey: ENV.OPENAI_API_KEY });
-        console.log(`🤖 Calling OpenAI Vision for task: ${currentTask.title}`);
-        const completion = await openai.chat.completions.create({
+      // Time validation with grace periods already done before calling this function
+      const openai = new OpenAI({ apiKey: ENV.OPENAI_API_KEY });
+      console.log(`🤖 Calling OpenAI Vision for task: ${currentTask.title}`);
+      const completion = await openai.chat.completions.create({
           model: "gpt-4o",
           messages: [
             {
@@ -202,16 +202,10 @@ Format: YES/NO, explanation, then "Confidence: X%"`,
         const valid =
           isYes && confidence >= TREASURE_HUNT_CONFIG.minConfidenceThreshold;
 
-        return {
-          valid,
-          response: aiResponse,
-          confidence,
-        };
-      }
       return {
-        valid: false,
-        response: "Submitting before start time or after end time",
-        confidence: 0,
+        valid,
+        response: aiResponse,
+        confidence,
       };
     } catch (error: any) {
       console.error("❌ Error validating submission:", error);
@@ -319,15 +313,21 @@ Format: YES/NO, explanation, then "Confidence: X%"`,
         walletAddress
       );
       
+      console.log(`📋 User current task:`, current);
+      
       if (!current) {
+        console.log(`❌ ensureAndGetCurrentTask returned null`);
         return `❌ Submission not validated`;
       }
 
       // Validate against the ACTIVE task
+      console.log(`🔍 Calling validateTreasureHuntSubmission with activeTask: ${activeTask.title}`);
       const validation = await this.validateTreasureHuntSubmission(
         { ...current, currentTask: activeTask },
         imageDataUri
       );
+      
+      console.log(`✅ Validation complete:`, validation);
 
       if (
         validation.valid &&
@@ -344,16 +344,17 @@ Format: YES/NO, explanation, then "Confidence: X%"`,
           await TreasureHuntAdapter.calculateUserStatsForToday(senderInboxId);
         const totalTasks = await TreasureHuntAdapter.getTotalTasksForDate();
         
-        // Find the NEXT task by time (not by user progress)
+        // Find the NEXT task by time (after the current active task)
         const sortedTasks = [...allTasks].sort((a, b) => {
           const aStart = a.startTime ? new Date(a.startTime).getTime() : 0;
           const bStart = b.startTime ? new Date(b.startTime).getTime() : 0;
           return aStart - bStart;
         });
         
+        const activeTaskStartTime = activeTask.startTime ? new Date(activeTask.startTime) : null;
         const nextTaskByTime = sortedTasks.find(task => {
           const startTime = task.startTime ? new Date(task.startTime) : null;
-          return startTime && now < startTime;
+          return startTime && activeTaskStartTime && startTime > activeTaskStartTime;
         });
 
         if (!nextTaskByTime) {
@@ -608,10 +609,14 @@ You know what to do - submit your photo! 📸`;
           // Remove from Map (one-time use)
           this.pendingTreasureImages.delete(key);
           console.log(`🗑️ Removed image from Map`);
+          console.log(`📝 Response: "${response}"`);
 
           if (response && response.trim() !== "") {
             await ctx.sendText(response);
+            console.log(`✅ Response sent to user`);
             return true;
+          } else {
+            console.log(`⚠️ Empty response - not sending message`);
           }
         } else {
           console.log(`❌ No stored image in Map - showing current task...`);

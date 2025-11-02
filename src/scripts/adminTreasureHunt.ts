@@ -40,8 +40,9 @@ const TEMP_TREASURE_HUNT_TASKS = [
     hint: "XMTP Stage, Wednesday 11/19 at 10am. Look for the blue and yellow geometric art!",
     points: 10,
     category: "xmtp",
-    startTime: toISOString(createArgentinaTime(16, 30)), // 4:30 PM Argentina
-    endTime: toISOString(createArgentinaTime(17, 0)), // 5:00 PM Argentina
+    startTime: toISOString(createArgentinaTime(21, 20)), // 9:20 PM Argentina
+    endTime: toISOString(createArgentinaTime(21, 50)), // 9:50 PM Argentina
+    // Grace period: 9:05 PM - 10:05 PM
   },
   {
     title: "The Hand of God",
@@ -52,8 +53,9 @@ const TEMP_TREASURE_HUNT_TASKS = [
     hint: "Look for street art honoring the greatest footballer Argentina ever produced!",
     points: 10,
     category: "base",
-    startTime: toISOString(createArgentinaTime(17, 30)), // 5:30 PM Argentina
-    endTime: toISOString(createArgentinaTime(18, 0)), // 6:00 PM Argentina
+    startTime: toISOString(createArgentinaTime(22, 20)), // 10:20 PM Argentina
+    endTime: toISOString(createArgentinaTime(22, 50)), // 10:50 PM Argentina
+    // Grace period: 10:05 PM - 11:05 PM (no overlap!)
   },
   {
     title: "Find a Spoon",
@@ -63,8 +65,9 @@ const TEMP_TREASURE_HUNT_TASKS = [
     hint: "Right next to the forks!",
     points: 10,
     category: "base",
-    startTime: toISOString(createArgentinaTime(19, 45)), // 7:45 PM Argentina
-    endTime: toISOString(createArgentinaTime(20, 15)), // 8:15 PM Argentina
+    startTime: toISOString(createArgentinaTime(23, 20)), // 11:20 PM Argentina
+    endTime: toISOString(createArgentinaTime(23, 50)), // 11:50 PM Argentina
+    // Grace period: 11:05 PM - 12:05 AM (no overlap!)
   },
   {
     title: "Find a Fork",
@@ -73,8 +76,9 @@ const TEMP_TREASURE_HUNT_TASKS = [
     hint: "Right next to the spoons!",
     points: 10,
     category: "xmtp",
-    startTime: toISOString(createArgentinaTime(20, 20)), // 8:20 PM Argentina
-    endTime: toISOString(createArgentinaTime(20, 50)), // 8:50 PM Argentina
+    startTime: toISOString(addMinutes(createArgentinaTime(23, 50), 30)), // 12:20 AM Argentina (next day)
+    endTime: toISOString(addMinutes(createArgentinaTime(23, 50), 60)), // 12:50 AM Argentina (next day)
+    // Grace period: 12:05 AM - 1:05 AM (no overlap!)
   },
   {
     title: "Find a Cup",
@@ -84,8 +88,9 @@ const TEMP_TREASURE_HUNT_TASKS = [
     hint: "Perfect for coffee or tea!",
     points: 10,
     category: "base",
-    startTime: toISOString(createArgentinaTime(20, 55)), // 8:55 PM Argentina
-    endTime: toISOString(createArgentinaTime(21, 25)), // 9:25 PM Argentina
+    startTime: toISOString(addMinutes(createArgentinaTime(23, 50), 90)), // 1:20 AM Argentina (next day)
+    endTime: toISOString(addMinutes(createArgentinaTime(23, 50), 120)), // 1:50 AM Argentina (next day)
+    // Grace period: 1:05 AM - 2:05 AM (no overlap!)
   },
 ];
 
